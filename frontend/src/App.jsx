@@ -435,23 +435,25 @@ function ActivitySkuForm({ sku, binding, mechanisms, giftMap, busy, onClose, onS
     <Drawer title="绑定活动机制" subtitle={`SKU #${String(sku.sku_number).padStart(4, "0")} · ${sku.name}`} onClose={onClose}>
       <form className="drawer-form" onSubmit={(event) => { event.preventDefault(); onSave({ mechanism_id: mechanismId || null, mechanism_copy: mechanismCopy.trim() }); }}>
         <div className="form-fields">
+          <label>活动机制文案<textarea value={mechanismCopy} onChange={(event) => setMechanismCopy(event.target.value)} placeholder="可为这个 SKU 单独填写一段机制文案" /><small>这是活动内的独立文案，不会修改机制库中的原机制</small></label>
           <fieldset className="mechanism-picker">
             <legend>选择机制</legend>
-            <label className={`mechanism-option ${mechanismId === "" ? "selected" : ""}`}>
-              <input type="radio" name="activity-mechanism" value="" checked={mechanismId === ""} onChange={() => setMechanismId("")} />
-              <span><strong>暂不绑定机制</strong><small>只保存下方的活动机制文案</small></span>
-            </label>
-            {mechanisms.map((mechanism) => (
-              <label className={`mechanism-option ${mechanismId === mechanism.id ? "selected" : ""}`} key={mechanism.id}>
-                <input type="radio" name="activity-mechanism" value={mechanism.id} checked={mechanismId === mechanism.id} onChange={() => setMechanismId(mechanism.id)} />
-                <span className="mechanism-option-content">
-                  <strong>{mechanism.mechanism_copy}</strong>
-                  <span className="mechanism-gift-summary">{mechanism.mechanism_gifts?.map((item) => `${giftMap[item.gift_id]?.name || "未知赠品"} ×${item.quantity}`).join(" + ") || "无赠品"}</span>
-                </span>
+            <div className="mechanism-options-scroll">
+              <label className={`mechanism-option ${mechanismId === "" ? "selected" : ""}`}>
+                <input type="radio" name="activity-mechanism" value="" checked={mechanismId === ""} onChange={() => setMechanismId("")} />
+                <span><strong>暂不绑定机制</strong><small>只保存上方的活动机制文案</small></span>
               </label>
-            ))}
+              {mechanisms.map((mechanism) => (
+                <label className={`mechanism-option ${mechanismId === mechanism.id ? "selected" : ""}`} key={mechanism.id}>
+                  <input type="radio" name="activity-mechanism" value={mechanism.id} checked={mechanismId === mechanism.id} onChange={() => setMechanismId(mechanism.id)} />
+                  <span className="mechanism-option-content">
+                    <span className="mechanism-option-heading"><strong>{mechanism.mechanism_copy}</strong><small>#{String(mechanism.mechanism_number).padStart(4, "0")}</small></span>
+                    <span className="mechanism-gift-summary">{mechanism.mechanism_gifts?.map((item) => `${giftMap[item.gift_id]?.name || "未知赠品"} ×${item.quantity}`).join(" + ") || "无赠品"}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
           </fieldset>
-          <label>活动机制文案<textarea value={mechanismCopy} onChange={(event) => setMechanismCopy(event.target.value)} placeholder="可为这个 SKU 单独填写一段机制文案" /><small>这是活动内的独立文案，不会修改机制库中的原机制</small></label>
         </div>
         <footer className="drawer-actions"><button className="button secondary" type="button" onClick={onClose}>取消</button><button className="button primary" disabled={busy} type="submit">{busy && <SpinnerGap className="spin" />}保存绑定</button></footer>
       </form>
