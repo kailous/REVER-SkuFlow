@@ -430,14 +430,32 @@ function ActivityForm({ libraries, busy, onClose, onSave }) {
 function ActivitySkuForm({ sku, binding, mechanisms, giftMap, busy, onClose, onSave }) {
   const [mechanismId, setMechanismId] = useState(binding?.mechanism_id || "");
   const [mechanismCopy, setMechanismCopy] = useState(binding?.mechanism_copy || "");
-  const selectedMechanism = mechanisms.find((mechanism) => mechanism.id === mechanismId) || null;
 
   return (
     <Drawer title="绑定活动机制" subtitle={`SKU #${String(sku.sku_number).padStart(4, "0")} · ${sku.name}`} onClose={onClose}>
       <form className="drawer-form" onSubmit={(event) => { event.preventDefault(); onSave({ mechanism_id: mechanismId || null, mechanism_copy: mechanismCopy.trim() }); }}>
         <div className="form-fields">
-          <label>选择机制<select value={mechanismId} onChange={(event) => setMechanismId(event.target.value)}><option value="">暂不绑定机制</option>{mechanisms.map((mechanism) => <option key={mechanism.id} value={mechanism.id}>#{String(mechanism.mechanism_number).padStart(4, "0")} · {mechanism.mechanism_copy}</option>)}</select></label>
-          {selectedMechanism && <div className="mechanism-preview"><span>机制预览</span><p>{selectedMechanism.mechanism_copy}</p><div className="sku-products-summary">{selectedMechanism.mechanism_gifts?.map((item) => <span key={item.gift_id}>{giftMap[item.gift_id]?.name || "未知赠品"} × {item.quantity}</span>)}</div></div>}
+          <fieldset className="mechanism-picker">
+            <legend>选择机制</legend>
+            <label className={`mechanism-option ${mechanismId === "" ? "selected" : ""}`}>
+              <input type="radio" name="activity-mechanism" value="" checked={mechanismId === ""} onChange={() => setMechanismId("")} />
+              <span><strong>暂不绑定机制</strong><small>只保存下方的活动机制文案</small></span>
+            </label>
+            {mechanisms.map((mechanism) => (
+              <label className={`mechanism-option ${mechanismId === mechanism.id ? "selected" : ""}`} key={mechanism.id}>
+                <input type="radio" name="activity-mechanism" value={mechanism.id} checked={mechanismId === mechanism.id} onChange={() => setMechanismId(mechanism.id)} />
+                <span className="mechanism-option-content">
+                  <strong>#{String(mechanism.mechanism_number).padStart(4, "0")} · {mechanism.mechanism_copy}</strong>
+                  <span className="mechanism-gift-preview">
+                    {mechanism.mechanism_gifts?.map((item) => {
+                      const gift = giftMap[item.gift_id];
+                      return <span className="mechanism-gift-row" key={item.gift_id}><span><b>{gift?.name || "未知赠品"}</b><small>{gift?.specification || "无规格"}</small></span><em>× {item.quantity}</em></span>;
+                    })}
+                  </span>
+                </span>
+              </label>
+            ))}
+          </fieldset>
           <label>活动机制文案<textarea value={mechanismCopy} onChange={(event) => setMechanismCopy(event.target.value)} placeholder="可为这个 SKU 单独填写一段机制文案" /><small>这是活动内的独立文案，不会修改机制库中的原机制</small></label>
         </div>
         <footer className="drawer-actions"><button className="button secondary" type="button" onClick={onClose}>取消</button><button className="button primary" disabled={busy} type="submit">{busy && <SpinnerGap className="spin" />}保存绑定</button></footer>
