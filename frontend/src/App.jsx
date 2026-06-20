@@ -3,6 +3,7 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowsDownUp,
+  CalendarBlank,
   CaretDown,
   Check,
   Cube,
@@ -84,6 +85,8 @@ const DEMO_SKUS = [
     ],
   },
 ];
+
+const DEMO_ACTIVITIES = [];
 
 const DEFAULT_SKU_NAME_FIELDS = ["series", "name", "specification"];
 const DEFAULT_DUPLICATE_SETTINGS = { skus: false, products: false, series: false, gifts: false };
@@ -400,6 +403,49 @@ function CopyMechanismForm({ mechanism, libraries, currentLibraryId, busy, onClo
   );
 }
 
+function ActivityForm({ libraries, busy, onClose, onSave }) {
+  const [libraryId, setLibraryId] = useState(libraries[0]?.id || "");
+  const [name, setName] = useState(libraries[0]?.name || "");
+
+  function changeLibrary(nextId) {
+    const currentLibrary = libraries.find((library) => library.id === libraryId);
+    const nextLibrary = libraries.find((library) => library.id === nextId);
+    setLibraryId(nextId);
+    if (!name.trim() || name === currentLibrary?.name) setName(nextLibrary?.name || "");
+  }
+
+  return (
+    <Drawer title="新建活动" subtitle="选择机制库后，系统会建立包含全部 SKU 的活动表" onClose={onClose}>
+      <form className="drawer-form" onSubmit={(event) => { event.preventDefault(); onSave({ name: name.trim(), mechanism_library_id: libraryId }); }}>
+        <div className="form-fields">
+          <label>机制库<select value={libraryId} onChange={(event) => changeLibrary(event.target.value)} required><option value="" disabled>请选择机制库</option>{libraries.map((library) => <option key={library.id} value={library.id}>{library.name}</option>)}</select><small>活动中只能选择这个库里的机制</small></label>
+          <label>活动名称<input value={name} onChange={(event) => setName(event.target.value)} placeholder="例如：618 活动" required /></label>
+        </div>
+        <footer className="drawer-actions"><button className="button secondary" type="button" onClick={onClose}>取消</button><button className="button primary" disabled={busy || !libraryId || !name.trim()} type="submit">{busy && <SpinnerGap className="spin" />}建立活动表</button></footer>
+      </form>
+    </Drawer>
+  );
+}
+
+function ActivitySkuForm({ sku, binding, mechanisms, giftMap, busy, onClose, onSave }) {
+  const [mechanismId, setMechanismId] = useState(binding?.mechanism_id || "");
+  const [mechanismCopy, setMechanismCopy] = useState(binding?.mechanism_copy || "");
+  const selectedMechanism = mechanisms.find((mechanism) => mechanism.id === mechanismId) || null;
+
+  return (
+    <Drawer title="绑定活动机制" subtitle={`SKU #${String(sku.sku_number).padStart(4, "0")} · ${sku.name}`} onClose={onClose}>
+      <form className="drawer-form" onSubmit={(event) => { event.preventDefault(); onSave({ mechanism_id: mechanismId || null, mechanism_copy: mechanismCopy.trim() }); }}>
+        <div className="form-fields">
+          <label>选择机制<select value={mechanismId} onChange={(event) => setMechanismId(event.target.value)}><option value="">暂不绑定机制</option>{mechanisms.map((mechanism) => <option key={mechanism.id} value={mechanism.id}>#{String(mechanism.mechanism_number).padStart(4, "0")} · {mechanism.mechanism_copy}</option>)}</select></label>
+          {selectedMechanism && <div className="mechanism-preview"><span>机制预览</span><p>{selectedMechanism.mechanism_copy}</p><div className="sku-products-summary">{selectedMechanism.mechanism_gifts?.map((item) => <span key={item.gift_id}>{giftMap[item.gift_id]?.name || "未知赠品"} × {item.quantity}</span>)}</div></div>}
+          <label>活动机制文案<textarea value={mechanismCopy} onChange={(event) => setMechanismCopy(event.target.value)} placeholder="可为这个 SKU 单独填写一段机制文案" /><small>这是活动内的独立文案，不会修改机制库中的原机制</small></label>
+        </div>
+        <footer className="drawer-actions"><button className="button secondary" type="button" onClick={onClose}>取消</button><button className="button primary" disabled={busy} type="submit">{busy && <SpinnerGap className="spin" />}保存绑定</button></footer>
+      </form>
+    </Drawer>
+  );
+}
+
 function SeriesForm({ item, nextSortOrder, busy, onClose, onSave }) {
   const [name, setName] = useState(item?.name || "");
   const [sortOrder, setSortOrder] = useState(item?.sort_order ?? nextSortOrder);
@@ -562,6 +608,8 @@ export function App() {
   const [mechanisms, setMechanisms] = useState([]);
   const [mechanismLibraries, setMechanismLibraries] = useState([]);
   const [selectedLibraryId, setSelectedLibraryId] = useState(null);
+  const [activities, setActivities] = useState([]);
+  const [selectedActivityId, setSelectedActivityId] = useState(null);
   const [series, setSeries] = useState([]);
   const [skus, setSkus] = useState([]);
   const [skuNameFields, setSkuNameFields] = useState(DEFAULT_SKU_NAME_FIELDS);
@@ -573,6 +621,7 @@ export function App() {
   const [skuQuery, setSkuQuery] = useState("");
   const [giftQuery, setGiftQuery] = useState("");
   const [mechanismQuery, setMechanismQuery] = useState("");
+  const [activityQuery, setActivityQuery] = useState("");
   const [sort, setSort] = useState({ key: "product_number", direction: "asc" });
   const [productEditor, setProductEditor] = useState(null);
   const [giftEditor, setGiftEditor] = useState(null);
@@ -580,6 +629,8 @@ export function App() {
   const [mechanismLibraryEditor, setMechanismLibraryEditor] = useState(null);
   const [copyMechanism, setCopyMechanism] = useState(null);
   const [copyMechanismLibrary, setCopyMechanismLibrary] = useState(null);
+  const [activityEditor, setActivityEditor] = useState(null);
+  const [activitySkuEditor, setActivitySkuEditor] = useState(null);
   const [seriesEditor, setSeriesEditor] = useState(null);
   const [skuEditor, setSkuEditor] = useState(null);
   const [confirm, setConfirm] = useState(null);
@@ -615,6 +666,7 @@ export function App() {
       const demoGifts = readDemo("skuflow-demo-gifts", DEMO_GIFTS);
       const demoMechanismLibraries = readDemo("skuflow-demo-mechanism-libraries", DEMO_MECHANISM_LIBRARIES);
       const demoMechanisms = readDemo("skuflow-demo-mechanisms", DEMO_MECHANISMS).map((mechanism) => ({ ...mechanism, library_id: mechanism.library_id || demoMechanismLibraries[0]?.id }));
+      const demoActivities = readDemo("skuflow-demo-activities", DEMO_ACTIVITIES);
       const demoNameFields = readDemo("skuflow-demo-name-fields", DEFAULT_SKU_NAME_FIELDS);
       const demoDuplicateSettings = { ...DEFAULT_DUPLICATE_SETTINGS, ...readDemo("skuflow-demo-duplicate-settings", DEFAULT_DUPLICATE_SETTINGS) };
       const demoSkus = readDemo("skuflow-demo-skus", DEMO_SKUS).map((sku) => ({
@@ -626,6 +678,7 @@ export function App() {
       setGifts(demoGifts);
       setMechanisms(demoMechanisms);
       setMechanismLibraries(demoMechanismLibraries);
+      setActivities(demoActivities);
       localStorage.setItem("skuflow-demo-mechanisms", JSON.stringify(demoMechanisms));
       setSkus(demoSkus);
       setSkuNameFields(demoNameFields);
@@ -640,6 +693,7 @@ export function App() {
       { data: giftData, error: giftError },
       { data: mechanismData, error: mechanismError },
       { data: mechanismLibraryData, error: mechanismLibraryError },
+      { data: activityData, error: activityError },
       { data: skuData, error: skuError },
       { data: settingsData, error: settingsError },
     ] = await Promise.all([
@@ -648,16 +702,18 @@ export function App() {
       supabase.from("gifts").select("*").order("gift_number"),
       supabase.from("gift_mechanisms").select("*, mechanism_gifts(gift_id, quantity)").order("mechanism_number"),
       supabase.from("mechanism_libraries").select("*").order("created_at"),
+      supabase.from("activities").select("*, activity_skus(sku_id, mechanism_id, mechanism_copy, updated_at)").order("activity_number"),
       supabase.from("skus").select("*, sku_products(product_id, quantity)").order("sku_number"),
       supabase.from("app_settings").select("sku_name_fields, allow_duplicate_skus, allow_duplicate_products, allow_duplicate_series, allow_duplicate_gifts").eq("id", true).single(),
     ]);
-    if (seriesError || productError || giftError || mechanismError || mechanismLibraryError || skuError || settingsError) setToast(seriesError?.message || productError?.message || giftError?.message || mechanismError?.message || mechanismLibraryError?.message || skuError?.message || settingsError?.message || "加载失败");
+    if (seriesError || productError || giftError || mechanismError || mechanismLibraryError || activityError || skuError || settingsError) setToast(seriesError?.message || productError?.message || giftError?.message || mechanismError?.message || mechanismLibraryError?.message || activityError?.message || skuError?.message || settingsError?.message || "加载失败");
     else {
       setSeries(seriesData || []);
       setProducts(productData || []);
       setGifts(giftData || []);
       setMechanisms(mechanismData || []);
       setMechanismLibraries(mechanismLibraryData || []);
+      setActivities(activityData || []);
       setSkus(skuData || []);
       setSkuNameFields(settingsData?.sku_name_fields || DEFAULT_SKU_NAME_FIELDS);
       setDuplicateSettings({ skus: settingsData?.allow_duplicate_skus ?? false, products: settingsData?.allow_duplicate_products ?? false, series: settingsData?.allow_duplicate_series ?? false, gifts: settingsData?.allow_duplicate_gifts ?? false });
@@ -691,6 +747,11 @@ export function App() {
   function saveDemoMechanismLibraries(nextLibraries) {
     setMechanismLibraries(nextLibraries);
     localStorage.setItem("skuflow-demo-mechanism-libraries", JSON.stringify(nextLibraries));
+  }
+
+  function saveDemoActivities(nextActivities) {
+    setActivities(nextActivities);
+    localStorage.setItem("skuflow-demo-activities", JSON.stringify(nextActivities));
   }
 
   async function saveMechanismLibrary(values) {
@@ -899,6 +960,52 @@ export function App() {
     setToast("工作台设置已更新");
   }
 
+  async function createActivity(values) {
+    setBusy(true);
+    if (demoMode) {
+      const id = crypto.randomUUID();
+      const nextActivity = {
+        id,
+        activity_number: Math.max(0, ...activities.map((item) => item.activity_number || 0)) + 1,
+        ...values,
+        created_at: new Date().toISOString(),
+        activity_skus: skus.map((sku) => ({ sku_id: sku.id, mechanism_id: null, mechanism_copy: "" })),
+      };
+      saveDemoActivities([...activities, nextActivity]);
+      setSelectedActivityId(id);
+    } else {
+      const { data, error } = await supabase.rpc("create_activity", { p_name: values.name, p_mechanism_library_id: values.mechanism_library_id });
+      if (error) { setToast(error.message); setBusy(false); return; }
+      await loadData();
+      setSelectedActivityId(data);
+    }
+    setBusy(false);
+    setActivityEditor(null);
+    setToast("活动表已建立");
+  }
+
+  async function saveActivitySku(values) {
+    if (!selectedActivityId || !activitySkuEditor) return;
+    setBusy(true);
+    if (demoMode) {
+      const next = activities.map((activity) => {
+        if (activity.id !== selectedActivityId) return activity;
+        const currentBindings = activity.activity_skus || [];
+        const existing = currentBindings.some((item) => item.sku_id === activitySkuEditor.id);
+        const nextBinding = { sku_id: activitySkuEditor.id, ...values, updated_at: new Date().toISOString() };
+        return { ...activity, activity_skus: existing ? currentBindings.map((item) => item.sku_id === activitySkuEditor.id ? nextBinding : item) : [...currentBindings, nextBinding] };
+      });
+      saveDemoActivities(next);
+    } else {
+      const { error } = await supabase.rpc("save_activity_sku", { p_activity_id: selectedActivityId, p_sku_id: activitySkuEditor.id, p_mechanism_id: values.mechanism_id, p_mechanism_copy: values.mechanism_copy });
+      if (error) { setToast(error.message); setBusy(false); return; }
+      await loadData();
+    }
+    setBusy(false);
+    setActivitySkuEditor(null);
+    setToast("SKU 活动机制已更新");
+  }
+
   async function deleteItem() {
     if (!confirm) return;
     setBusy(true);
@@ -908,6 +1015,7 @@ export function App() {
     const isGift = confirm.type === "gift";
     const isMechanism = confirm.type === "mechanism";
     const isMechanismLibrary = confirm.type === "mechanism-library";
+    const isActivity = confirm.type === "activity";
     if (demoMode) {
       if (isProduct && skus.some((sku) => sku.sku_products?.some((item) => item.product_id === confirm.item.id))) {
         setToast("该产品正在被 SKU 使用，暂时无法删除");
@@ -930,6 +1038,7 @@ export function App() {
         return;
       } else if (isGift) saveDemoGifts(gifts.filter((item) => item.id !== confirm.item.id));
       else if (isMechanism) saveDemoMechanisms(mechanisms.filter((item) => item.id !== confirm.item.id));
+      else if (isActivity) saveDemoActivities(activities.filter((item) => item.id !== confirm.item.id));
       else if (isMechanismLibrary && mechanisms.some((item) => item.library_id === confirm.item.id)) {
         setToast("该机制库中还有机制，暂时无法删除");
         setBusy(false);
@@ -937,7 +1046,7 @@ export function App() {
         return;
       } else if (isMechanismLibrary) saveDemoMechanismLibraries(mechanismLibraries.filter((item) => item.id !== confirm.item.id));
     } else {
-      const table = isProduct ? "products" : isSeries ? "product_series" : isGift ? "gifts" : isMechanism ? "gift_mechanisms" : isMechanismLibrary ? "mechanism_libraries" : "skus";
+      const table = isProduct ? "products" : isSeries ? "product_series" : isGift ? "gifts" : isMechanism ? "gift_mechanisms" : isMechanismLibrary ? "mechanism_libraries" : isActivity ? "activities" : "skus";
       const { error } = await supabase.from(table).delete().eq("id", confirm.item.id);
       if (error) {
         const relationMessage = isProduct ? "该产品正在被 SKU 使用，暂时无法删除" : isGift ? "该赠品正在被机制使用，暂时无法删除" : isMechanismLibrary ? "该机制库中还有机制，暂时无法删除" : "该系列下还有产品，暂时无法删除";
@@ -951,7 +1060,8 @@ export function App() {
     setBusy(false);
     setConfirm(null);
     if (isMechanismLibrary && selectedLibraryId === confirm.item.id) setSelectedLibraryId(null);
-    setToast(isProduct ? "产品已删除" : isSeries ? "系列已删除" : isGift ? "赠品已删除" : isMechanism ? "机制已删除" : isMechanismLibrary ? "机制库已删除" : "SKU 已删除");
+    if (isActivity && selectedActivityId === confirm.item.id) setSelectedActivityId(null);
+    setToast(isProduct ? "产品已删除" : isSeries ? "系列已删除" : isGift ? "赠品已删除" : isMechanism ? "机制已删除" : isMechanismLibrary ? "机制库已删除" : isActivity ? "活动已删除" : "SKU 已删除");
   }
 
   async function signOut() {
@@ -1012,6 +1122,19 @@ export function App() {
     });
   }, [mechanisms, mechanismQuery, giftMap, selectedLibraryId]);
   const selectedMechanismLibrary = mechanismLibraries.find((library) => library.id === selectedLibraryId) || null;
+  const selectedActivity = activities.find((activity) => activity.id === selectedActivityId) || null;
+  const activityMechanisms = selectedActivity ? mechanisms.filter((mechanism) => mechanism.library_id === selectedActivity.mechanism_library_id) : [];
+  const activityMechanismMap = Object.fromEntries(activityMechanisms.map((mechanism) => [mechanism.id, mechanism]));
+  const visibleActivitySkus = useMemo(() => {
+    const normalized = activityQuery.trim().toLowerCase();
+    if (!selectedActivity) return [];
+    const bindingMap = Object.fromEntries((selectedActivity.activity_skus || []).map((item) => [item.sku_id, item]));
+    return skus.filter((sku) => {
+      const binding = bindingMap[sku.id];
+      const mechanism = mechanisms.find((item) => item.id === binding?.mechanism_id);
+      return !normalized || [sku.name, sku.sku_number, binding?.mechanism_copy, mechanism?.mechanism_copy].some((value) => String(value || "").toLowerCase().includes(normalized));
+    }).map((sku) => ({ ...sku, activity_binding: bindingMap[sku.id] || null }));
+  }, [activityQuery, mechanisms, selectedActivity, skus]);
 
   function updateSort(key) {
     setSort((current) => ({ key, direction: current.key === key && current.direction === "asc" ? "desc" : "asc" }));
@@ -1026,6 +1149,7 @@ export function App() {
         <div className="sidebar-brand"><div className="brand-mark small"><Cube weight="duotone" size={18} /></div><strong>REVER SkuFlow</strong></div>
         <nav className="sidebar-nav">
           <button className={view === "skus" ? "active" : ""} onClick={() => setView("skus")}><Package size={19} /><span>SKU 组合</span></button>
+          <button className={view === "activities" ? "active" : ""} onClick={() => { setView("activities"); setSelectedActivityId(null); }}><CalendarBlank size={19} /><span>活动管理</span></button>
           <button className={view === "mechanisms" ? "active" : ""} onClick={() => { setView("mechanisms"); setSelectedLibraryId(null); }}><ArrowsDownUp size={19} /><span>机制管理</span></button>
           <button className={view === "products" ? "active" : ""} onClick={() => setView("products")}><ListBullets size={19} /><span>产品</span></button>
           <button className={view === "gifts" ? "active" : ""} onClick={() => setView("gifts")}><Gift size={19} /><span>赠品管理</span></button>
@@ -1090,6 +1214,34 @@ export function App() {
               <section className="table-wrap library-table-wrap">
                 {loading ? <div className="table-state"><SpinnerGap size={24} className="spin" />正在加载</div> : mechanismLibraries.length === 0 ? <div className="empty-state"><div className="empty-icon"><FolderSimple size={22} /></div><h2>还没有机制库</h2><p>创建“五一活动”或“618 活动”等机制库。</p></div> : (
                   <table className="mechanism-library-table"><thead><tr><th>机制库名称</th><th>机制数量</th><th aria-label="操作" /></tr></thead><tbody>{mechanismLibraries.map((library) => <tr key={library.id}><td><button className="library-name-button" onClick={() => setSelectedLibraryId(library.id)}><FolderSimple size={18} />{library.name}</button></td><td className="muted-cell">{mechanisms.filter((item) => item.library_id === library.id).length} 个机制</td><td className="action-cell"><button className="icon-button" onClick={(event) => { event.stopPropagation(); setMenuId(menuId === library.id ? null : library.id); }} aria-label="更多操作"><DotsThree size={20} weight="bold" /></button>{menuId === library.id && <div className="row-menu" onClick={(event) => event.stopPropagation()}><button onClick={() => { setMechanismLibraryEditor(library); setMenuId(null); }}><PencilSimple size={16} />编辑</button><button onClick={() => { setCopyMechanismLibrary(library); setMenuId(null); }}><ArrowsDownUp size={16} />复制机制库</button><button className="danger-text" onClick={() => { setConfirm({ type: "mechanism-library", item: library }); setMenuId(null); }}><Trash size={16} />删除</button></div>}</td></tr>)}</tbody></table>
+                )}
+              </section>
+            </>
+          )
+        ) : view === "activities" ? (
+          selectedActivity ? (
+            <>
+              <header className="page-header"><div><p className="breadcrumb"><button onClick={() => setSelectedActivityId(null)}>活动管理</button><span> / {selectedActivity.name}</span></p><h1>{selectedActivity.name}</h1><p className="page-description">机制库：{mechanismLibraries.find((library) => library.id === selectedActivity.mechanism_library_id)?.name || "未知机制库"} · 共 {skus.length} 个 SKU</p></div></header>
+              <div className="toolbar"><div className="search-field"><MagnifyingGlass size={18} /><input value={activityQuery} onChange={(event) => setActivityQuery(event.target.value)} placeholder="搜索 SKU、机制或活动文案" /><kbd>⌘ K</kbd></div></div>
+              <section className="table-wrap">
+                {loading ? <div className="table-state"><SpinnerGap size={24} className="spin" />正在加载</div> : visibleActivitySkus.length === 0 ? <div className="empty-state"><div className="empty-icon"><CalendarBlank size={22} /></div><h2>{activityQuery ? "没有匹配的 SKU" : "还没有 SKU"}</h2><p>{activityQuery ? "试试更换搜索词。" : "先在 SKU 组合中建立 SKU。"}</p></div> : (
+                  <table className="activity-sku-table">
+                    <thead><tr><th>SKU 编号</th><th>SKU 名称</th><th>绑定机制</th><th>赠品组合</th><th>活动机制文案</th><th aria-label="操作" /></tr></thead>
+                    <tbody>{visibleActivitySkus.map((sku) => {
+                      const binding = sku.activity_binding;
+                      const mechanism = activityMechanismMap[binding?.mechanism_id];
+                      return <tr key={sku.id}><td className="number-cell">#{String(sku.sku_number).padStart(4, "0")}</td><td><button className="name-button" onClick={() => setActivitySkuEditor(sku)}>{sku.name}</button></td><td>{mechanism ? <button className="name-button mechanism-copy-button" onClick={() => setActivitySkuEditor(sku)}>#{String(mechanism.mechanism_number).padStart(4, "0")} · {mechanism.mechanism_copy}</button> : <span className="muted-cell">未绑定</span>}</td><td><div className="sku-products-summary">{mechanism?.mechanism_gifts?.map((item) => <span key={item.gift_id}>{giftMap[item.gift_id]?.name || "未知赠品"} × {item.quantity}</span>)}</div></td><td className="activity-copy-cell">{binding?.mechanism_copy || "—"}</td><td className="action-cell"><button className="icon-button" onClick={() => setActivitySkuEditor(sku)} aria-label="设置活动机制"><PencilSimple size={17} /></button></td></tr>;
+                    })}</tbody>
+                  </table>
+                )}
+              </section>
+            </>
+          ) : (
+            <>
+              <header className="page-header"><div><p className="breadcrumb">营销配置</p><h1>活动管理</h1><p className="page-description">选择机制库，建立包含全部 SKU 的活动表</p></div><button className="button primary" onClick={() => mechanismLibraries.length ? setActivityEditor({}) : setToast("请先创建一个机制库")}><Plus size={17} weight="bold" />新建活动</button></header>
+              <section className="table-wrap library-table-wrap">
+                {loading ? <div className="table-state"><SpinnerGap size={24} className="spin" />正在加载</div> : activities.length === 0 ? <div className="empty-state"><div className="empty-icon"><CalendarBlank size={22} /></div><h2>还没有活动</h2><p>选择一个机制库，建立第一张活动 SKU 表。</p></div> : (
+                  <table className="activity-table"><thead><tr><th>活动编号</th><th>活动名称</th><th>机制库</th><th>SKU 数量</th><th>已绑定机制</th><th aria-label="操作" /></tr></thead><tbody>{activities.map((activity) => <tr key={activity.id}><td className="number-cell">#{String(activity.activity_number).padStart(4, "0")}</td><td><button className="library-name-button" onClick={() => setSelectedActivityId(activity.id)}><CalendarBlank size={18} />{activity.name}</button></td><td><span className="series-chip">{mechanismLibraries.find((library) => library.id === activity.mechanism_library_id)?.name || "未知机制库"}</span></td><td className="muted-cell">{skus.length} 个</td><td className="muted-cell">{activity.activity_skus?.filter((item) => item.mechanism_id).length || 0} 个</td><td className="action-cell"><button className="icon-button" onClick={(event) => { event.stopPropagation(); setMenuId(menuId === activity.id ? null : activity.id); }} aria-label="更多操作"><DotsThree size={20} weight="bold" /></button>{menuId === activity.id && <div className="row-menu" onClick={(event) => event.stopPropagation()}><button onClick={() => { setSelectedActivityId(activity.id); setMenuId(null); }}><PencilSimple size={16} />打开</button><button className="danger-text" onClick={() => { setConfirm({ type: "activity", item: activity }); setMenuId(null); }}><Trash size={16} />删除</button></div>}</td></tr>)}</tbody></table>
                 )}
               </section>
             </>
@@ -1203,12 +1355,14 @@ export function App() {
       {mechanismLibraryEditor && <MechanismLibraryForm library={mechanismLibraryEditor.id ? mechanismLibraryEditor : null} busy={busy} onClose={() => setMechanismLibraryEditor(null)} onSave={saveMechanismLibrary} />}
       {copyMechanism && <CopyMechanismForm mechanism={copyMechanism} libraries={mechanismLibraries} currentLibraryId={selectedLibraryId} busy={busy} onClose={() => setCopyMechanism(null)} onCopy={copyMechanismToLibrary} />}
       {copyMechanismLibrary && <CopyMechanismLibraryForm library={copyMechanismLibrary} mechanismCount={mechanisms.filter((item) => item.library_id === copyMechanismLibrary.id).length} busy={busy} onClose={() => setCopyMechanismLibrary(null)} onCopy={copyLibrary} />}
+      {activityEditor && <ActivityForm libraries={mechanismLibraries} busy={busy} onClose={() => setActivityEditor(null)} onSave={createActivity} />}
+      {activitySkuEditor && selectedActivity && <ActivitySkuForm sku={activitySkuEditor} binding={activitySkuEditor.activity_binding || selectedActivity.activity_skus?.find((item) => item.sku_id === activitySkuEditor.id)} mechanisms={activityMechanisms} giftMap={giftMap} busy={busy} onClose={() => setActivitySkuEditor(null)} onSave={saveActivitySku} />}
       {seriesEditor && <SeriesForm item={seriesEditor.id ? seriesEditor : null} nextSortOrder={Math.max(0, ...series.map((item) => item.sort_order)) + 1} busy={busy} onClose={() => setSeriesEditor(null)} onSave={saveSeries} />}
       {skuEditor && <SkuForm sku={skuEditor.id ? skuEditor : null} skus={skus} products={products} series={series} nameFields={skuNameFields} allowDuplicate={duplicateSettings.skus} busy={busy} onClose={() => setSkuEditor(null)} onSave={saveSku} />}
       {duplicateConfirm && <ConfirmDialog title={`发现重复${duplicateConfirm.type === "product" ? "产品" : duplicateConfirm.type === "gift" ? "赠品" : "系列"}`} message="设置允许继续创建，但系统仍会在每次操作时提醒。确定保留这条重复记录吗？" confirmLabel="仍然创建" busy={busy} onCancel={() => setDuplicateConfirm(null)} onConfirm={() => { const pending = duplicateConfirm; setDuplicateConfirm(null); if (pending.type === "product") saveProduct(pending.values, true); else if (pending.type === "gift") saveGift(pending.values, true); else saveSeries(pending.values, true); }} />}
       {confirm && (
         <ConfirmDialog
-          title={`删除${confirm.type === "product" ? "产品" : confirm.type === "series" ? "系列" : confirm.type === "gift" ? "赠品" : confirm.type === "mechanism" ? "机制" : confirm.type === "mechanism-library" ? "机制库" : "SKU"}？`}
+          title={`删除${confirm.type === "product" ? "产品" : confirm.type === "series" ? "系列" : confirm.type === "gift" ? "赠品" : confirm.type === "mechanism" ? "机制" : confirm.type === "mechanism-library" ? "机制库" : confirm.type === "activity" ? "活动" : "SKU"}？`}
           message={
             confirm.type === "product"
               ? `“${confirm.item.name}”将被永久删除；如果正在被 SKU 使用，系统会阻止删除。`
@@ -1220,6 +1374,8 @@ export function App() {
                     ? `机制 #${String(confirm.item.mechanism_number).padStart(4, "0")} 及其赠品组合将被永久删除。`
                     : confirm.type === "mechanism-library"
                       ? `“${confirm.item.name}”删除后无法恢复；如果库内还有机制，系统会阻止删除。`
+                      : confirm.type === "activity"
+                        ? `“${confirm.item.name}”及其中所有 SKU 的机制绑定和独立文案将被永久删除。`
                       : `“${confirm.item.name}”及其产品组合将被永久删除。`
           }
           busy={busy}

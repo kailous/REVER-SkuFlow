@@ -11,6 +11,8 @@ Mechanism management is a left-sidebar area parallel to SKU management. It opens
 Mechanism libraries can also be copied as a whole. A library copy receives a new name and UUID, preserves the original per-library mechanism numbers, and duplicates every mechanism plus its gift quantities as independently editable records.
 Within one mechanism library, a mechanism is a duplicate only when both its normalized mechanism copy and its order-independent gift/quantity combination match. The same gift combination with different copy is not a duplicate. Exact duplicates are blocked on save and when copying into another library.
 
+Activity management is a left-sidebar area. Creating an activity requires choosing one mechanism library and creates an activity table that always lists every current SKU. Each SKU may bind one mechanism from the activity's selected library, preview that mechanism's copy and gift combination, and store an independent paragraph-form activity mechanism copy. Activity copy never changes the source mechanism.
+
 When implementing from a selected generated mock, treat that image as the source of truth for layout, component anatomy, density, spacing, color, typography, visible content, and hierarchy.
 
 ## Durable design direction

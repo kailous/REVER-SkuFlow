@@ -89,6 +89,9 @@ textarea { min-height: 92px; resize: vertical; }
 .inherit-toggle { display: flex !important; grid-template-columns: auto 1fr; align-items: center; }
 .inherit-toggle input { width: auto; }
 .selling-points-preview { display: grid; gap: 4px; border-radius: 6px; padding: 9px 10px; color: var(--muted); background: var(--surface-hover); font-size: 11px; font-weight: 400; }
+.mechanism-preview { display: grid; gap: 10px; border: 1px solid var(--line); border-radius: 8px; padding: 14px; background: var(--surface-hover); }
+.mechanism-preview > span { color: var(--muted); font-size: 11px; font-weight: 600; }
+.mechanism-preview p { margin: 0; color: var(--text); font-size: 13px; line-height: 1.7; white-space: pre-wrap; }
 input:hover, select:hover { border-color: var(--faint); }
 input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 13%, transparent); outline: 0; }
 input::placeholder { color: var(--faint); }
@@ -148,6 +151,10 @@ th { height: 46px; border-bottom: 1px solid var(--line); color: var(--muted); fo
 .mechanism-table th:nth-child(1) { width: 13%; } .mechanism-table th:nth-child(2) { width: 34%; } .mechanism-table th:nth-child(3) { width: 36%; } .mechanism-table th:nth-child(4) { width: 11%; } .mechanism-table th:nth-child(5) { width: 44px; }
 .mechanism-copy-button { max-width: 100%; white-space: normal; line-height: 1.5; text-align: left; }
 .mechanism-library-table th:nth-child(1) { width: 68%; } .mechanism-library-table th:nth-child(2) { width: 26%; } .mechanism-library-table th:nth-child(3) { width: 44px; }
+.activity-table th:nth-child(1) { width: 12%; } .activity-table th:nth-child(2) { width: 27%; } .activity-table th:nth-child(3) { width: 24%; } .activity-table th:nth-child(4) { width: 14%; } .activity-table th:nth-child(5) { width: 17%; } .activity-table th:nth-child(6) { width: 44px; }
+.activity-sku-table { min-width: 1080px; }
+.activity-sku-table th:nth-child(1) { width: 10%; } .activity-sku-table th:nth-child(2) { width: 20%; } .activity-sku-table th:nth-child(3) { width: 25%; } .activity-sku-table th:nth-child(4) { width: 18%; } .activity-sku-table th:nth-child(5) { width: 23%; } .activity-sku-table th:nth-child(6) { width: 44px; }
+.activity-copy-cell { color: var(--muted); line-height: 1.5; }
 .library-table-wrap { margin-top: 42px; }
 .library-name-button { display: inline-flex; align-items: center; gap: 10px; border: 0; padding: 0; color: var(--text-strong); background: transparent; font-weight: 500; cursor: pointer; }
 .library-name-button svg { color: var(--muted); }
