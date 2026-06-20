@@ -445,13 +445,8 @@ function ActivitySkuForm({ sku, binding, mechanisms, giftMap, busy, onClose, onS
               <label className={`mechanism-option ${mechanismId === mechanism.id ? "selected" : ""}`} key={mechanism.id}>
                 <input type="radio" name="activity-mechanism" value={mechanism.id} checked={mechanismId === mechanism.id} onChange={() => setMechanismId(mechanism.id)} />
                 <span className="mechanism-option-content">
-                  <strong>#{String(mechanism.mechanism_number).padStart(4, "0")} · {mechanism.mechanism_copy}</strong>
-                  <span className="mechanism-gift-preview">
-                    {mechanism.mechanism_gifts?.map((item) => {
-                      const gift = giftMap[item.gift_id];
-                      return <span className="mechanism-gift-row" key={item.gift_id}><span><b>{gift?.name || "未知赠品"}</b><small>{gift?.specification || "无规格"}</small></span><em>× {item.quantity}</em></span>;
-                    })}
-                  </span>
+                  <strong>{mechanism.mechanism_copy}</strong>
+                  <span className="mechanism-gift-summary">{mechanism.mechanism_gifts?.map((item) => `${giftMap[item.gift_id]?.name || "未知赠品"} ×${item.quantity}`).join(" + ") || "无赠品"}</span>
                 </span>
               </label>
             ))}
