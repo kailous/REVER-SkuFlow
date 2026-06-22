@@ -22,6 +22,7 @@ When implementing from a selected generated mock, treat that image as the source
 - Keep the interface minimal and productivity-focused, inspired by Notion's restraint without copying its branding.
 - Support light and dark appearance automatically through the operating system preference.
 - Prefer whitespace, typography, dividers, and row grouping over cards, decoration, gradients, or heavy shadows.
+- On pages with a search field, `⌘K` on macOS and `Ctrl+K` elsewhere focus and select the current page search input. Do not intercept the shortcut while a dialog or drawer is open, or on pages without search.
 - Product management functionality takes priority over visual polish; the user plans a manual design pass after the complete demo is working.
 - Manage SKU combinations inside the same application through a left-sidebar entry. Each SKU can contain multiple existing products, each with a positive integer quantity.
 - Generate SKU names automatically from configurable `系列`、`产品名称`、`规格` fields, defaulting to that order with no separator inside each product name. Join multiple products with ` + ` and only append ` × 数量` when quantity is greater than 1. Keep the field order adjustable in Settings.
