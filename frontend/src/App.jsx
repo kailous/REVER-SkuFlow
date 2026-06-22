@@ -665,6 +665,20 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    function focusPageSearch(event) {
+      if (event.key.toLowerCase() !== "k" || (!event.metaKey && !event.ctrlKey)) return;
+      if (document.querySelector('[role="dialog"], [role="alertdialog"]')) return;
+      const searchInput = document.querySelector(".workspace .search-field input");
+      if (!searchInput) return;
+      event.preventDefault();
+      searchInput.focus();
+      searchInput.select();
+    }
+    window.addEventListener("keydown", focusPageSearch);
+    return () => window.removeEventListener("keydown", focusPageSearch);
+  }, []);
+
+  useEffect(() => {
     if (!supabaseReady) { setAuthChecked(true); return; }
     supabase.auth.getSession().then(({ data }) => { setSession(data.session); setAuthChecked(true); });
     const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => setSession(nextSession));
