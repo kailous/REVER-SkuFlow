@@ -319,6 +319,7 @@ function MechanismForm({ mechanism, gifts, busy, onClose, onSave }) {
       : [{ gift_id: gifts[0]?.id || "", quantity: 1 }],
   );
   const [mechanismCopy, setMechanismCopy] = useState(mechanism?.mechanism_copy || "");
+  const [isFixed, setIsFixed] = useState(Boolean(mechanism?.is_fixed));
   const selectedIds = new Set(items.map((item) => item.gift_id).filter(Boolean));
 
   function updateItem(index, key, value) {
@@ -333,12 +334,12 @@ function MechanismForm({ mechanism, gifts, busy, onClose, onSave }) {
     onSave({
       mechanism_copy: mechanismCopy.trim(),
       items: items.filter((item) => item.gift_id).map((item) => ({ gift_id: item.gift_id, quantity: Number(item.quantity) })),
-      is_fixed: Boolean(mechanism?.is_fixed),
+      is_fixed: isFixed,
     });
   }
 
   return (
-    <Drawer title={`${mechanism?.id ? "编辑" : "新建"}${mechanism?.is_fixed ? "固定机制" : "机制"}`} subtitle={mechanism?.id ? `编号 #${String(mechanism.mechanism_number).padStart(4, "0")}` : mechanism?.is_fixed ? "固定机制会自动应用到使用本库的所有活动 SKU" : "编号与 UUID 将由系统自动生成"} onClose={onClose}>
+    <Drawer title={mechanism?.id ? "编辑机制" : "新建机制"} subtitle={mechanism?.id ? `编号 #${String(mechanism.mechanism_number).padStart(4, "0")}` : "编号与 UUID 将由系统自动生成"} onClose={onClose}>
       <form className="drawer-form" onSubmit={submit}>
         <div className="form-fields">
           <fieldset className="composition-fieldset">
@@ -358,6 +359,7 @@ function MechanismForm({ mechanism, gifts, busy, onClose, onSave }) {
             <button className="add-composition" type="button" disabled={selectedIds.size >= gifts.length} onClick={addItem}><Plus size={15} />添加赠品</button>
           </fieldset>
           <label>机制文案<textarea value={mechanismCopy} onChange={(event) => setMechanismCopy(event.target.value)} placeholder="输入一段完整的机制说明" required /></label>
+          <label className="toggle-row compact-toggle"><span><strong>固定机制</strong><small>开启后，这一条机制会自动应用到使用本库的所有活动 SKU</small></span><input type="checkbox" checked={isFixed} onChange={(event) => setIsFixed(event.target.checked)} /></label>
         </div>
         <footer className="drawer-actions"><button className="button secondary" type="button" onClick={onClose}>取消</button><button className="button primary" disabled={busy || items.length === 0 || !mechanismCopy.trim()} type="submit">{busy && <SpinnerGap className="spin" />}保存机制</button></footer>
       </form>
@@ -365,52 +367,13 @@ function MechanismForm({ mechanism, gifts, busy, onClose, onSave }) {
   );
 }
 
-function createFixedMechanismDraft(gifts) {
-  return { client_id: crypto.randomUUID(), mechanism_copy: "", items: [{ gift_id: gifts[0]?.id || "", quantity: 1 }] };
-}
-
-function MechanismLibraryForm({ library, gifts, busy, onClose, onSave }) {
+function MechanismLibraryForm({ library, busy, onClose, onSave }) {
   const [name, setName] = useState(library?.name || "");
-  const [fixedEnabled, setFixedEnabled] = useState(false);
-  const [step, setStep] = useState(1);
-  const [fixedMechanisms, setFixedMechanisms] = useState([createFixedMechanismDraft(gifts)]);
-
-  function updateMechanism(index, updater) {
-    setFixedMechanisms((current) => current.map((item, itemIndex) => itemIndex === index ? updater(item) : item));
-  }
-
-  function submit(event) {
-    event.preventDefault();
-    if (!library && fixedEnabled && step === 1) { setStep(2); return; }
-    onSave({ name: name.trim(), fixed_mechanisms: library || !fixedEnabled ? [] : fixedMechanisms.map((item) => ({ mechanism_copy: item.mechanism_copy.trim(), items: item.items.map((gift) => ({ gift_id: gift.gift_id, quantity: Number(gift.quantity) })) })) });
-  }
-
-  const fixedValid = fixedMechanisms.length > 0 && fixedMechanisms.every((item) => item.mechanism_copy.trim() && item.items.length > 0 && item.items.every((gift) => gift.gift_id && Number(gift.quantity) > 0));
   return (
-    <Drawer title={library ? "编辑机制库" : step === 1 ? "新建机制库" : "添加固定机制"} subtitle={step === 1 ? "每个机制库拥有独立的机制表和编号" : `${name} · 可连续添加多个固定机制`} onClose={onClose}>
-      <form className="drawer-form" onSubmit={submit}>
-        {step === 1 ? <div className="form-fields">
-          <label>机制库名称<input value={name} onChange={(event) => setName(event.target.value)} placeholder="例如：五一活动" required autoFocus /></label>
-          {!library && <label className="toggle-row compact-toggle"><span><strong>固定机制</strong><small>{gifts.length ? "创建后自动应用到本库所有活动中的每一个 SKU" : "请先创建赠品，才能配置固定机制"}</small></span><input type="checkbox" disabled={!gifts.length} checked={fixedEnabled} onChange={(event) => setFixedEnabled(event.target.checked)} /></label>}
-        </div> : <div className="form-fields fixed-mechanism-builders">
-          {fixedMechanisms.map((mechanism, mechanismIndex) => {
-            const selectedIds = new Set(mechanism.items.map((item) => item.gift_id).filter(Boolean));
-            return <fieldset className="fixed-mechanism-builder" key={mechanism.client_id}>
-              <legend>固定机制 {mechanismIndex + 1}</legend>
-              <label>机制文案<textarea value={mechanism.mechanism_copy} onChange={(event) => updateMechanism(mechanismIndex, (item) => ({ ...item, mechanism_copy: event.target.value }))} placeholder="输入一段完整的机制说明" required /></label>
-              <div className="composition-list">{mechanism.items.map((item, giftIndex) => <div className="composition-row" key={`${item.gift_id}-${giftIndex}`}>
-                <select value={item.gift_id} aria-label={`固定机制 ${mechanismIndex + 1} 赠品 ${giftIndex + 1}`} onChange={(event) => updateMechanism(mechanismIndex, (current) => ({ ...current, items: current.items.map((gift, index) => index === giftIndex ? { ...gift, gift_id: event.target.value } : gift) }))} required>
-                  <option value="" disabled>选择赠品</option>{gifts.map((gift) => <option key={gift.id} value={gift.id} disabled={gift.id !== item.gift_id && selectedIds.has(gift.id)}>{gift.name}{gift.specification ? ` · ${gift.specification}` : ""}</option>)}
-                </select>
-                <label className="quantity-input"><span>数量</span><input type="number" min="1" value={item.quantity} onChange={(event) => updateMechanism(mechanismIndex, (current) => ({ ...current, items: current.items.map((gift, index) => index === giftIndex ? { ...gift, quantity: event.target.value } : gift) }))} required /></label>
-                <button className="icon-button remove-composition" type="button" aria-label={`移除固定机制 ${mechanismIndex + 1} 的赠品 ${giftIndex + 1}`} disabled={mechanism.items.length === 1} onClick={() => updateMechanism(mechanismIndex, (current) => ({ ...current, items: current.items.filter((_, index) => index !== giftIndex) }))}><Minus size={17} /></button>
-              </div>)}</div>
-              <div className="fixed-builder-actions"><button className="add-composition" type="button" disabled={selectedIds.size >= gifts.length} onClick={() => { const nextGift = gifts.find((gift) => !selectedIds.has(gift.id)); if (nextGift) updateMechanism(mechanismIndex, (current) => ({ ...current, items: [...current.items, { gift_id: nextGift.id, quantity: 1 }] })); }}><Plus size={15} />添加赠品</button>{fixedMechanisms.length > 1 && <button className="text-button danger-text" type="button" onClick={() => setFixedMechanisms((current) => current.filter((_, index) => index !== mechanismIndex))}>移除此机制</button>}</div>
-            </fieldset>;
-          })}
-          <button className="button secondary" type="button" onClick={() => setFixedMechanisms((current) => [...current, createFixedMechanismDraft(gifts)])}><Plus size={15} />再添加一个固定机制</button>
-        </div>}
-        <footer className="drawer-actions">{step === 2 && <button className="button secondary" type="button" onClick={() => setStep(1)}>上一步</button>}<button className="button secondary" type="button" onClick={onClose}>取消</button><button className="button primary" disabled={busy || !name.trim() || (step === 2 && !fixedValid)} type="submit">{busy && <SpinnerGap className="spin" />}{step === 1 && fixedEnabled ? "下一步" : "保存机制库"}</button></footer>
+    <Drawer title={library ? "编辑机制库" : "新建机制库"} subtitle="每个机制库拥有独立的机制表和编号" onClose={onClose}>
+      <form className="drawer-form" onSubmit={(event) => { event.preventDefault(); onSave({ name: name.trim() }); }}>
+        <div className="form-fields"><label>机制库名称<input value={name} onChange={(event) => setName(event.target.value)} placeholder="例如：五一活动" required autoFocus /></label></div>
+        <footer className="drawer-actions"><button className="button secondary" type="button" onClick={onClose}>取消</button><button className="button primary" disabled={busy || !name.trim()} type="submit">{busy && <SpinnerGap className="spin" />}保存机制库</button></footer>
       </form>
     </Drawer>
   );
@@ -817,19 +780,14 @@ export function App() {
     if (duplicate) { setToast("已存在同名机制库"); return; }
     setBusy(true);
     if (demoMode) {
-      const libraryValues = { name: values.name };
-      const newLibraryId = crypto.randomUUID();
       const next = existing
-        ? mechanismLibraries.map((library) => library.id === existing.id ? { ...library, ...libraryValues } : library)
-        : [...mechanismLibraries, { ...libraryValues, id: newLibraryId, created_at: new Date().toISOString() }];
+        ? mechanismLibraries.map((library) => library.id === existing.id ? { ...library, ...values } : library)
+        : [...mechanismLibraries, { ...values, id: crypto.randomUUID(), created_at: new Date().toISOString() }];
       saveDemoMechanismLibraries(next);
-      if (!existing && values.fixed_mechanisms?.length) {
-        saveDemoMechanisms([...mechanisms, ...values.fixed_mechanisms.map((mechanism, index) => ({ id: crypto.randomUUID(), library_id: newLibraryId, mechanism_number: index + 1, mechanism_copy: mechanism.mechanism_copy, mechanism_gifts: mechanism.items, is_fixed: true, created_at: new Date().toISOString() }))]);
-      }
     } else {
       const request = existing
-        ? supabase.from("mechanism_libraries").update({ name: values.name }).eq("id", existing.id)
-        : supabase.rpc("create_mechanism_library_with_fixed", { p_name: values.name, p_fixed_mechanisms: values.fixed_mechanisms || [] });
+        ? supabase.from("mechanism_libraries").update(values).eq("id", existing.id)
+        : supabase.from("mechanism_libraries").insert(values);
       const { error } = await request;
       if (error) { setToast(error.code === "23505" ? "已存在同名机制库" : error.message); setBusy(false); return; }
       await loadData();
@@ -1272,7 +1230,7 @@ export function App() {
         ) : view === "mechanisms" ? (
           selectedMechanismLibrary ? (
             <>
-              <header className="page-header"><div><p className="breadcrumb"><button onClick={() => setSelectedLibraryId(null)}>机制库</button><span> / {selectedMechanismLibrary.name}</span></p><h1>{selectedMechanismLibrary.name}</h1><p className="page-description">{visibleFixedMechanisms.length} 个固定机制 · {visibleRegularMechanisms.length} 个普通机制</p></div><div className="header-actions"><button className="button secondary" onClick={() => gifts.length ? setMechanismEditor({ is_fixed: true }) : setToast("请先创建至少一个赠品")}><Plus size={17} />新建固定机制</button><button className="button primary" onClick={() => gifts.length ? setMechanismEditor({ is_fixed: false }) : setToast("请先创建至少一个赠品")}><Plus size={17} weight="bold" />新建机制</button></div></header>
+              <header className="page-header"><div><p className="breadcrumb"><button onClick={() => setSelectedLibraryId(null)}>机制库</button><span> / {selectedMechanismLibrary.name}</span></p><h1>{selectedMechanismLibrary.name}</h1><p className="page-description">{visibleFixedMechanisms.length} 个固定机制 · {visibleRegularMechanisms.length} 个普通机制</p></div><button className="button primary" onClick={() => gifts.length ? setMechanismEditor({}) : setToast("请先创建至少一个赠品")}><Plus size={17} weight="bold" />新建机制</button></header>
               <div className="toolbar"><div className="search-field"><MagnifyingGlass size={18} /><input value={mechanismQuery} onChange={(event) => setMechanismQuery(event.target.value)} placeholder="搜索机制编号、文案或赠品" /><kbd>⌘ K</kbd></div></div>
               <section className="mechanism-groups">
                 {loading ? <div className="table-state"><SpinnerGap size={24} className="spin" />正在加载</div> : visibleMechanisms.length === 0 ? <div className="empty-state"><div className="empty-icon"><ArrowsDownUp size={22} /></div><h2>{mechanismQuery ? "没有匹配的机制" : "这个库还没有机制"}</h2><p>{mechanismQuery ? "试试更换搜索词。" : "新建一个机制，并选择它包含的赠品。"}</p></div> : <>{visibleFixedMechanisms.length > 0 && <section><div className="mechanism-group-heading"><div><h2>固定机制</h2><p>自动应用到使用本库的所有活动 SKU</p></div><span>{visibleFixedMechanisms.length}</span></div><div className="table-wrap">{renderMechanismTable(visibleFixedMechanisms)}</div></section>}{visibleRegularMechanisms.length > 0 && <section><div className="mechanism-group-heading"><div><h2>普通机制</h2><p>可在活动中为每个 SKU 单独选择</p></div><span>{visibleRegularMechanisms.length}</span></div><div className="table-wrap">{renderMechanismTable(visibleRegularMechanisms)}</div></section>}</>}
@@ -1423,7 +1381,7 @@ export function App() {
       {productEditor && <ProductForm product={productEditor.id ? productEditor : null} series={series} busy={busy} onClose={() => setProductEditor(null)} onSave={saveProduct} />}
       {giftEditor && <GiftForm gift={giftEditor.id ? giftEditor : null} busy={busy} onClose={() => setGiftEditor(null)} onSave={saveGift} />}
       {mechanismEditor && <MechanismForm mechanism={mechanismEditor} gifts={gifts} busy={busy} onClose={() => setMechanismEditor(null)} onSave={saveMechanism} />}
-      {mechanismLibraryEditor && <MechanismLibraryForm library={mechanismLibraryEditor.id ? mechanismLibraryEditor : null} gifts={gifts} busy={busy} onClose={() => setMechanismLibraryEditor(null)} onSave={saveMechanismLibrary} />}
+      {mechanismLibraryEditor && <MechanismLibraryForm library={mechanismLibraryEditor.id ? mechanismLibraryEditor : null} busy={busy} onClose={() => setMechanismLibraryEditor(null)} onSave={saveMechanismLibrary} />}
       {copyMechanism && <CopyMechanismForm mechanism={copyMechanism} libraries={mechanismLibraries} currentLibraryId={selectedLibraryId} busy={busy} onClose={() => setCopyMechanism(null)} onCopy={copyMechanismToLibrary} />}
       {copyMechanismLibrary && <CopyMechanismLibraryForm library={copyMechanismLibrary} mechanismCount={mechanisms.filter((item) => item.library_id === copyMechanismLibrary.id).length} busy={busy} onClose={() => setCopyMechanismLibrary(null)} onCopy={copyLibrary} />}
       {activityEditor && <ActivityForm libraries={mechanismLibraries} busy={busy} onClose={() => setActivityEditor(null)} onSave={createActivity} />}
