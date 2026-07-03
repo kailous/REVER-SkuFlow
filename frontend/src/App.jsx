@@ -160,6 +160,15 @@ function getEffectiveProductSellingPoints(product, series) {
 
 function normalizeSellingCopy(value) { return Array.isArray(value) ? value.join("\n") : (value || ""); }
 
+function getAuthErrorMessage(error) {
+  if (!error) return "操作失败，请稍后再试。";
+  const message = error.message || String(error);
+  if (/failed to fetch|networkerror|load failed|fetch/i.test(message)) {
+    return "无法连接认证服务。请检查网络后重试，或稍后再试。";
+  }
+  return message;
+}
+
 function AuthView({ onDemo, recoveryMode = false, notice = "", onRecoveryComplete }) {
   const [mode, setMode] = useState(recoveryMode ? "updatePassword" : "login");
   const [email, setEmail] = useState("");
@@ -198,21 +207,32 @@ function AuthView({ onDemo, recoveryMode = false, notice = "", onRecoveryComplet
 
     let data;
     let error;
-    if (mode === "login") {
-      ({ data, error } = await supabase.auth.signInWithPassword({ email, password }));
-    } else if (mode === "register") {
-      ({ data, error } = await supabase.auth.signUp({ email, password }));
-    } else if (mode === "forgot") {
-      ({ data, error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}${window.location.pathname}`,
-      }));
-    } else {
-      ({ data, error } = await supabase.auth.updateUser({ password }));
+    try {
+      if (mode === "login") {
+        ({ data, error } = await supabase.auth.signInWithPassword({ email, password }));
+      } else if (mode === "register") {
+        ({ data, error } = await supabase.auth.signUp({ email, password }));
+      } else if (mode === "forgot") {
+        const response = await fetch("/api/reset-password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email,
+            redirectTo: `${window.location.origin}${window.location.pathname}`,
+          }),
+        });
+        data = await response.json().catch(() => ({}));
+        if (!response.ok) error = new Error(data.error || "重置邮件发送失败，请稍后再试。");
+      } else {
+        ({ data, error } = await supabase.auth.updateUser({ password }));
+      }
+    } catch (authError) {
+      error = authError;
     }
 
     setBusy(false);
     if (error) {
-      setMessage(error.message);
+      setMessage(getAuthErrorMessage(error));
       return;
     }
     if (mode === "register" && !data.session) {
