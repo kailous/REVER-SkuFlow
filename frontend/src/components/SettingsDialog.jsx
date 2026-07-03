@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { ArrowDown, ArrowUp, Info, SpinnerGap, SignOut, X, Cube } from "@phosphor-icons/react";
+import { ArrowDown, ArrowUp, SpinnerGap, X, Cube } from "@phosphor-icons/react";
 import { SKU_NAME_FIELD_LABELS } from "../utils";
 
 const appVersion = typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "—";
 
-export function SettingsDialog({ activeTab, accountEmail, accountLabel, accountStatus, canChangePassword, fields, duplicateSettings, busy, theme, onClose, onSavePersonal, onSaveWorkspace, onSelectTab, onSignOut, onThemeChange }) {
+export function SettingsDialog({ activeTab, accountEmail, accountLabel, accountStatus, canChangePassword, fields, duplicateSettings, busy, theme, onClose, onSavePersonal, onSaveWorkspace, onSelectTab, onThemeChange }) {
   const [draft, setDraft] = useState(fields);
   const [duplicateDraft, setDuplicateDraft] = useState(duplicateSettings);
   const [displayNameDraft, setDisplayNameDraft] = useState(accountLabel);
@@ -103,10 +103,6 @@ export function SettingsDialog({ activeTab, accountEmail, accountLabel, accountS
                 {personalMessage && <p className="settings-inline-message">{personalMessage}</p>}
                 <div className="settings-save-row personal-save-row">
                   <button className="button primary" disabled={busy || !personalDirty} onClick={savePersonal}>{busy && <SpinnerGap className="spin" />}保存个人设置</button>
-                </div>
-                <div className="settings-danger-row">
-                  <span><strong>退出登录</strong><small>退出后需要重新登录才能访问线上数据。</small></span>
-                  <button className="button secondary" onClick={() => { onClose(); onSignOut(); }}><SignOut size={16} />退出</button>
                 </div>
               </section>
             ) : activeTab === "workspace" ? (

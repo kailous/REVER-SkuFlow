@@ -272,12 +272,12 @@ th:last-child, td:last-child { padding-right: 14px; }
 .toggle-row strong { color: var(--text); font-size: 13px; font-weight: 500; }
 .toggle-row small { color: var(--muted); font-size: 11px; }
 .toggle-row input { width: 38px; height: 21px; accent-color: var(--accent); cursor: pointer; }
-.profile-row, .settings-input-row, .settings-select-row, .settings-danger-row { min-height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 18px; border-top: 1px solid var(--line); padding: 14px 0; }
+.profile-row, .settings-input-row, .settings-select-row { min-height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 18px; border-top: 1px solid var(--line); padding: 14px 0; }
 .profile-row { justify-content: flex-start; }
 .profile-avatar { width: 34px; height: 34px; display: grid; place-items: center; flex: none; border-radius: 8px; color: var(--text-strong); background: var(--surface-active); }
-.profile-row div:last-child, .settings-input-row > span, .settings-select-row > span, .settings-danger-row > span { min-width: 0; display: grid; gap: 5px; }
-.profile-row strong, .settings-input-row strong, .settings-select-row strong, .settings-danger-row strong { overflow: hidden; color: var(--text); font-size: 13px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
-.profile-row small, .settings-input-row small, .settings-select-row small, .settings-danger-row small { color: var(--muted); font-size: 11px; line-height: 1.45; }
+.profile-row div:last-child, .settings-input-row > span, .settings-select-row > span { min-width: 0; display: grid; gap: 5px; }
+.profile-row strong, .settings-input-row strong, .settings-select-row strong { overflow: hidden; color: var(--text); font-size: 13px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.profile-row small, .settings-input-row small, .settings-select-row small { color: var(--muted); font-size: 11px; line-height: 1.45; }
 .settings-input-row input, .settings-select-row select { width: 190px; flex: none; }
 .settings-password-block { display: grid; gap: 12px; border-top: 1px solid var(--line); padding: 4px 0 18px; }
 .settings-password-block label { display: grid; gap: 8px; color: var(--text); font-size: 13px; font-weight: 600; }
@@ -356,7 +356,7 @@ th:last-child, td:last-child { padding-right: 14px; }
   .settings-tabs { display: flex; gap: 6px; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--line); padding: 8px 12px; }
   .settings-tabs button { width: auto; flex: none; padding: 8px 10px; white-space: nowrap; }
   .settings-content { padding: 18px 18px 22px; }
-  .settings-input-row, .settings-select-row, .settings-danger-row { align-items: flex-start; flex-direction: column; }
+  .settings-input-row, .settings-select-row { align-items: flex-start; flex-direction: column; }
   .settings-input-row input, .settings-select-row select { width: 100%; }
   .settings-save-row { bottom: -22px; margin: 22px -18px -22px; padding: 12px 18px; }
   .workspace { height: auto; overflow-y: visible; padding: 30px 18px 60px; }

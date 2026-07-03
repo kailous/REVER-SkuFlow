@@ -844,7 +844,6 @@ export function App() {
           onSavePersonal={savePersonalSettings}
           onSaveWorkspace={saveWorkspaceSettings}
           onSelectTab={setSettingsTab}
-          onSignOut={signOut}
           onThemeChange={updateTheme}
         />
       )}
