@@ -716,6 +716,7 @@ export function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState("personal");
   const [theme, setTheme] = useState("system");
+  const [demoNickname, setDemoNickname] = useState("");
   const [products, setProducts] = useState([]);
   const [gifts, setGifts] = useState([]);
   const [mechanisms, setMechanisms] = useState([]);
@@ -754,6 +755,7 @@ export function App() {
   useEffect(() => {
     const previewTheme = new URLSearchParams(window.location.search).get("theme");
     const savedTheme = localStorage.getItem("skuflow-theme");
+    setDemoNickname(localStorage.getItem("skuflow-demo-nickname") || "");
     const nextTheme = previewTheme === "light" || previewTheme === "dark" ? previewTheme : savedTheme || "system";
     setTheme(nextTheme);
     if (nextTheme === "light" || nextTheme === "dark") document.documentElement.dataset.theme = nextTheme;
@@ -1214,6 +1216,38 @@ export function App() {
     await supabase.auth.signOut();
   }
 
+  async function savePersonalSettings({ displayName, password }) {
+    const nextDisplayName = displayName.trim();
+    if (demoMode) {
+      localStorage.setItem("skuflow-demo-nickname", nextDisplayName);
+      setDemoNickname(nextDisplayName);
+      setToast("个人设置已保存");
+      return { ok: true };
+    }
+    if (!supabaseReady) return { ok: false, error: "Supabase 环境变量尚未配置。" };
+
+    const currentDisplayName = session?.user?.user_metadata?.display_name || "";
+    const values = {};
+    if (nextDisplayName !== currentDisplayName) values.data = { ...(session?.user?.user_metadata || {}), display_name: nextDisplayName };
+    if (password) values.password = password;
+    if (Object.keys(values).length === 0) return { ok: true };
+
+    setBusy(true);
+    let data;
+    let error;
+    try {
+      ({ data, error } = await supabase.auth.updateUser(values));
+    } catch (authError) {
+      error = authError;
+    } finally {
+      setBusy(false);
+    }
+    if (error) return { ok: false, error: getAuthErrorMessage(error) };
+    if (data?.user) setSession((current) => current ? { ...current, user: data.user } : current);
+    setToast(password ? "个人设置已保存，密码已更新" : "个人设置已保存");
+    return { ok: true };
+  }
+
   const seriesMap = useMemo(() => Object.fromEntries(series.map((item) => [item.id, item])), [series]);
   const visibleProducts = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -1270,6 +1304,8 @@ export function App() {
   const visibleFixedMechanisms = visibleMechanisms.filter((mechanism) => mechanism.is_fixed);
   const visibleRegularMechanisms = visibleMechanisms.filter((mechanism) => !mechanism.is_fixed);
   const selectedActivity = activities.find((activity) => activity.id === selectedActivityId) || null;
+  const accountEmail = session?.user?.email || "";
+  const accountDisplayName = demoMode ? demoNickname || "本地演示" : session?.user?.user_metadata?.display_name || accountEmail;
   const activityMechanisms = selectedActivity ? mechanisms.filter((mechanism) => mechanism.library_id === selectedActivity.mechanism_library_id) : [];
   const fixedActivityMechanisms = activityMechanisms.filter((mechanism) => mechanism.is_fixed);
   const selectableActivityMechanisms = activityMechanisms.filter((mechanism) => !mechanism.is_fixed);
@@ -1326,7 +1362,7 @@ export function App() {
         <footer className="sidebar-footer" onClick={(event) => event.stopPropagation()}>
           <button className={settingsOpen ? "account active" : "account"} onClick={() => setMenuId(menuId === "__account" ? null : "__account")} aria-haspopup="menu" aria-expanded={menuId === "__account"}>
             <span className="status-dot" />
-            <div><strong>{demoMode ? "本地演示" : session?.user?.email}</strong><small>{demoMode ? "浏览器数据" : "已连接 Supabase"}</small></div>
+            <div><strong>{accountDisplayName}</strong><small>{demoMode ? "浏览器数据" : "已连接 Supabase"}</small></div>
             <CaretDown size={13} />
           </button>
           {menuId === "__account" && (
@@ -1524,13 +1560,16 @@ export function App() {
       {settingsOpen && (
         <SettingsDialog
           activeTab={settingsTab}
-          accountLabel={demoMode ? "本地演示" : session?.user?.email}
+          accountEmail={demoMode ? "本地演示账号" : accountEmail}
+          accountLabel={accountDisplayName}
           accountStatus={demoMode ? "浏览器数据" : "已连接 Supabase"}
+          canChangePassword={!demoMode}
           duplicateSettings={duplicateSettings}
           fields={skuNameFields}
           busy={busy}
           theme={theme}
           onClose={() => setSettingsOpen(false)}
+          onSavePersonal={savePersonalSettings}
           onSaveWorkspace={saveWorkspaceSettings}
           onSelectTab={setSettingsTab}
           onSignOut={signOut}
@@ -1576,12 +1615,20 @@ export function App() {
   );
 }
 
-function SettingsDialog({ activeTab, accountLabel, accountStatus, fields, duplicateSettings, busy, theme, onClose, onSaveWorkspace, onSelectTab, onSignOut, onThemeChange }) {
+function SettingsDialog({ activeTab, accountEmail, accountLabel, accountStatus, canChangePassword, fields, duplicateSettings, busy, theme, onClose, onSavePersonal, onSaveWorkspace, onSelectTab, onSignOut, onThemeChange }) {
   const [draft, setDraft] = useState(fields);
   const [duplicateDraft, setDuplicateDraft] = useState(duplicateSettings);
+  const [displayNameDraft, setDisplayNameDraft] = useState(accountLabel);
+  const [passwordDraft, setPasswordDraft] = useState("");
+  const [passwordConfirmDraft, setPasswordConfirmDraft] = useState("");
+  const [personalMessage, setPersonalMessage] = useState("");
 
   useEffect(() => setDraft(fields), [fields]);
   useEffect(() => setDuplicateDraft(duplicateSettings), [duplicateSettings]);
+  useEffect(() => {
+    setDisplayNameDraft(accountLabel);
+    setPersonalMessage("");
+  }, [accountLabel]);
 
   function moveField(index, direction) {
     const target = index + direction;
@@ -1594,6 +1641,32 @@ function SettingsDialog({ activeTab, accountLabel, accountStatus, fields, duplic
   }
 
   const workspaceDirty = draft.join() !== fields.join() || JSON.stringify(duplicateDraft) !== JSON.stringify(duplicateSettings);
+  const personalDirty = displayNameDraft.trim() !== accountLabel || passwordDraft.length > 0 || passwordConfirmDraft.length > 0;
+
+  async function savePersonal() {
+    if (passwordDraft || passwordConfirmDraft) {
+      if (!canChangePassword) {
+        setPersonalMessage("演示模式不支持修改密码。");
+        return;
+      }
+      if (passwordDraft.length < 6) {
+        setPersonalMessage("新密码至少需要 6 位。");
+        return;
+      }
+      if (passwordDraft !== passwordConfirmDraft) {
+        setPersonalMessage("两次输入的新密码不一致。");
+        return;
+      }
+    }
+    const result = await onSavePersonal({ displayName: displayNameDraft, password: passwordDraft });
+    if (!result.ok) {
+      setPersonalMessage(result.error || "保存失败，请稍后再试。");
+      return;
+    }
+    setPasswordDraft("");
+    setPasswordConfirmDraft("");
+    setPersonalMessage("已保存。");
+  }
 
   return (
     <div className="settings-layer" role="dialog" aria-modal="true" aria-label="设置">
@@ -1616,6 +1689,14 @@ function SettingsDialog({ activeTab, accountLabel, accountStatus, fields, duplic
                   <div className="profile-avatar"><Cube weight="duotone" size={20} /></div>
                   <div><strong>{accountLabel}</strong><small>{accountStatus}</small></div>
                 </div>
+                <label className="settings-input-row">
+                  <span><strong>昵称</strong><small>显示在左下角账号菜单中。</small></span>
+                  <input value={displayNameDraft} onChange={(event) => setDisplayNameDraft(event.target.value)} placeholder="输入昵称" />
+                </label>
+                <label className="settings-input-row">
+                  <span><strong>邮箱</strong><small>邮箱用于登录和接收密码重置邮件。</small></span>
+                  <input value={accountEmail} disabled readOnly />
+                </label>
                 <label className="settings-select-row">
                   <span><strong>界面主题</strong><small>选择当前设备上的显示方式。</small></span>
                   <select value={theme} onChange={(event) => onThemeChange(event.target.value)}>
@@ -1624,6 +1705,15 @@ function SettingsDialog({ activeTab, accountLabel, accountStatus, fields, duplic
                     <option value="dark">深色</option>
                   </select>
                 </label>
+                <div className="settings-password-block">
+                  <div className="settings-heading"><div><h2>修改密码</h2><p>{canChangePassword ? "保存后下次登录请使用新密码。" : "本地演示模式不支持修改密码。"}</p></div></div>
+                  <label>新密码<input type="password" value={passwordDraft} onChange={(event) => setPasswordDraft(event.target.value)} placeholder="至少 6 位" minLength={6} disabled={!canChangePassword} /></label>
+                  <label>确认新密码<input type="password" value={passwordConfirmDraft} onChange={(event) => setPasswordConfirmDraft(event.target.value)} placeholder="再次输入新密码" minLength={6} disabled={!canChangePassword} /></label>
+                </div>
+                {personalMessage && <p className="settings-inline-message">{personalMessage}</p>}
+                <div className="settings-save-row personal-save-row">
+                  <button className="button primary" disabled={busy || !personalDirty} onClick={savePersonal}>{busy && <SpinnerGap className="spin" />}保存个人设置</button>
+                </div>
                 <div className="settings-danger-row">
                   <span><strong>退出登录</strong><small>退出后需要重新登录才能访问线上数据。</small></span>
                   <button className="button secondary" onClick={() => { onClose(); onSignOut(); }}><SignOut size={16} />退出</button>
