@@ -124,6 +124,8 @@ input::placeholder { color: var(--faint); }
 .button.full { width: 100%; }
 .text-button { display: block; margin: 15px auto 0; border: 0; padding: 3px; color: var(--muted); background: transparent; font-size: 12px; cursor: pointer; }
 .text-button:hover { color: var(--text-strong); }
+.auth-links { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 15px; }
+.auth-links .text-button { margin: 0; }
 .auth-divider { display: flex; align-items: center; gap: 12px; margin: 24px 0; color: var(--faint); font-size: 11px; }
 .auth-divider::before, .auth-divider::after { content: ""; height: 1px; flex: 1; background: var(--line); }
 .auth-note { margin: 13px 0 0; color: var(--faint); text-align: center; font-size: 11px; line-height: 1.5; }
