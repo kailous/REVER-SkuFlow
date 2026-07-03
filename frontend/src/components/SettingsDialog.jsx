@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
-import { ArrowDown, ArrowUp, SpinnerGap, SignOut, X, Cube } from "@phosphor-icons/react";
+import { ArrowDown, ArrowUp, Info, SpinnerGap, SignOut, X, Cube } from "@phosphor-icons/react";
 import { SKU_NAME_FIELD_LABELS } from "../utils";
+
+const appVersion = typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "—";
 
 export function SettingsDialog({ activeTab, accountEmail, accountLabel, accountStatus, canChangePassword, fields, duplicateSettings, busy, theme, onClose, onSavePersonal, onSaveWorkspace, onSelectTab, onSignOut, onThemeChange }) {
   const [draft, setDraft] = useState(fields);
@@ -67,6 +69,7 @@ export function SettingsDialog({ activeTab, accountEmail, accountLabel, accountS
           <nav className="settings-tabs" aria-label="设置分类">
             <button className={activeTab === "personal" ? "active" : ""} onClick={() => onSelectTab("personal")}>个人设置</button>
             <button className={activeTab === "workspace" ? "active" : ""} onClick={() => onSelectTab("workspace")}>工作台设置</button>
+            <button className={activeTab === "about" ? "active" : ""} onClick={() => onSelectTab("about")}>关于</button>
           </nav>
           <div className="settings-content">
             {activeTab === "personal" ? (
@@ -106,7 +109,7 @@ export function SettingsDialog({ activeTab, accountEmail, accountLabel, accountS
                   <button className="button secondary" onClick={() => { onClose(); onSignOut(); }}><SignOut size={16} />退出</button>
                 </div>
               </section>
-            ) : (
+            ) : activeTab === "workspace" ? (
               <section>
                 <div className="settings-section-heading"><h3>工作台设置</h3><p>调整 SKU 自动命名和重复数据规则。</p></div>
                 <div className="settings-block">
@@ -133,6 +136,15 @@ export function SettingsDialog({ activeTab, accountEmail, accountLabel, accountS
                 </div>
                 <div className="settings-save-row">
                   <button className="button primary" disabled={busy || !workspaceDirty} onClick={() => onSaveWorkspace(draft, duplicateDraft)}>{busy && <SpinnerGap className="spin" />}保存设置</button>
+                </div>
+              </section>
+            ) : (
+              <section>
+                <div className="settings-section-heading"><h3>关于</h3><p>SkuFlow 产品信息。</p></div>
+                <div className="about-section">
+                  <div className="about-logo"><Cube weight="duotone" size={36} /></div>
+                  <h2 className="about-name">SkuFlow</h2>
+                  <p className="about-version">版本 {appVersion}</p>
                 </div>
               </section>
             )}
