@@ -679,13 +679,15 @@ export function App() {
       <aside className="sidebar">
         <div className="sidebar-brand"><div className="brand-mark small"><Cube weight="duotone" size={18} /></div><strong>REVER SkuFlow</strong></div>
         <nav className="sidebar-nav">
-          <button className={view === "skus" ? "active" : ""} onClick={() => setView("skus")}><Package size={19} /><span>SKU 组合</span></button>
-          <button className={view === "products" ? "active" : ""} onClick={() => setView("products")}><ListBullets size={19} /><span>产品</span></button>
-          <button className={view === "series" ? "active" : ""} onClick={() => setView("series")}><FolderSimple size={19} /><span>系列管理</span></button>
-          <button className={view === "gifts" ? "active" : ""} onClick={() => setView("gifts")}><Gift size={19} /><span>赠品管理</span></button>
-          <button className={view === "mechanisms" ? "active" : ""} onClick={() => { setView("mechanisms"); setSelectedLibraryId(null); }}><ArrowsDownUp size={19} /><span>机制管理</span></button>
-          <button className={view === "activities" ? "active" : ""} onClick={() => { setView("activities"); setSelectedActivityId(null); }}><CalendarBlank size={19} /><span>活动管理</span></button>
-          <button className={view === "preview" ? "active" : ""} onClick={() => setView("preview")}><DownloadSimple size={19} /><span>表格预览</span></button>
+          <div className="sidebar-nav-label">商品资料</div>
+          <button className={view === "skus" ? "active" : ""} aria-current={view === "skus" ? "page" : undefined} onClick={() => setView("skus")}><Package size={19} /><span>SKU 组合</span></button>
+          <button className={view === "products" ? "active" : ""} aria-current={view === "products" ? "page" : undefined} onClick={() => setView("products")}><ListBullets size={19} /><span>产品</span></button>
+          <button className={view === "series" ? "active" : ""} aria-current={view === "series" ? "page" : undefined} onClick={() => setView("series")}><FolderSimple size={19} /><span>系列管理</span></button>
+          <button className={view === "gifts" ? "active" : ""} aria-current={view === "gifts" ? "page" : undefined} onClick={() => setView("gifts")}><Gift size={19} /><span>赠品管理</span></button>
+          <div className="sidebar-nav-label">营销输出</div>
+          <button className={view === "mechanisms" ? "active" : ""} aria-current={view === "mechanisms" ? "page" : undefined} onClick={() => { setView("mechanisms"); setSelectedLibraryId(null); }}><ArrowsDownUp size={19} /><span>机制管理</span></button>
+          <button className={view === "activities" ? "active" : ""} aria-current={view === "activities" ? "page" : undefined} onClick={() => { setView("activities"); setSelectedActivityId(null); }}><CalendarBlank size={19} /><span>活动管理</span></button>
+          <button className={view === "preview" ? "active" : ""} aria-current={view === "preview" ? "page" : undefined} onClick={() => setView("preview")}><DownloadSimple size={19} /><span>表格预览</span></button>
         </nav>
         <footer className="sidebar-footer" onClick={(event) => event.stopPropagation()}>
           <button className={settingsOpen ? "account active" : "account"} onClick={() => setMenuId(menuId === "__account" ? null : "__account")} aria-haspopup="menu" aria-expanded={menuId === "__account"}>
