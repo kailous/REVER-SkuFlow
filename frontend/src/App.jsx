@@ -160,12 +160,28 @@ function getEffectiveProductSellingPoints(product, series) {
 
 function normalizeSellingCopy(value) { return Array.isArray(value) ? value.join("\n") : (value || ""); }
 
-function AuthView({ onDemo }) {
-  const [mode, setMode] = useState("login");
+function AuthView({ onDemo, recoveryMode = false, notice = "", onRecoveryComplete }) {
+  const [mode, setMode] = useState(recoveryMode ? "updatePassword" : "login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(notice);
+
+  useEffect(() => {
+    if (recoveryMode) setMode("updatePassword");
+  }, [recoveryMode]);
+
+  useEffect(() => {
+    setMessage(notice);
+  }, [notice]);
+
+  function switchMode(nextMode) {
+    setMode(nextMode);
+    setMessage("");
+    setPassword("");
+    setPasswordConfirm("");
+  }
 
   async function submit(event) {
     event.preventDefault();
@@ -173,12 +189,27 @@ function AuthView({ onDemo }) {
       setMessage("Supabase 环境变量尚未配置，请使用本地演示模式。");
       return;
     }
+    if (mode === "updatePassword" && password !== passwordConfirm) {
+      setMessage("两次输入的新密码不一致。");
+      return;
+    }
     setBusy(true);
     setMessage("");
-    const action = mode === "login"
-      ? supabase.auth.signInWithPassword({ email, password })
-      : supabase.auth.signUp({ email, password });
-    const { data, error } = await action;
+
+    let data;
+    let error;
+    if (mode === "login") {
+      ({ data, error } = await supabase.auth.signInWithPassword({ email, password }));
+    } else if (mode === "register") {
+      ({ data, error } = await supabase.auth.signUp({ email, password }));
+    } else if (mode === "forgot") {
+      ({ data, error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}${window.location.pathname}`,
+      }));
+    } else {
+      ({ data, error } = await supabase.auth.updateUser({ password }));
+    }
+
     setBusy(false);
     if (error) {
       setMessage(error.message);
@@ -186,30 +217,67 @@ function AuthView({ onDemo }) {
     }
     if (mode === "register" && !data.session) {
       setMessage("注册成功。请检查邮箱并完成验证后登录。");
+    } else if (mode === "forgot") {
+      setMessage("重置邮件已发送。请打开邮箱里的链接继续设置新密码。");
+    } else if (mode === "updatePassword") {
+      setMessage("密码已更新。请使用新密码重新登录。");
+      setPassword("");
+      setPasswordConfirm("");
+      await supabase.auth.signOut();
+      onRecoveryComplete?.("密码已更新。请使用新密码重新登录。");
     }
   }
+
+  const title = {
+    login: "登录工作台",
+    register: "创建测试账号",
+    forgot: "重置密码",
+    updatePassword: "设置新密码",
+  }[mode];
+  const intro = {
+    login: "管理产品资料、系列与保质期。数据通过 Supabase 安全同步。",
+    register: "创建账号后即可开始同步管理商品资料。",
+    forgot: "输入账号邮箱，我们会发送一封密码重置邮件。",
+    updatePassword: "请输入新密码，保存后使用新密码重新登录。",
+  }[mode];
+  const needsEmail = mode !== "updatePassword";
+  const needsPassword = mode !== "forgot";
 
   return (
     <main className="auth-page">
       <section className="auth-panel">
         <div className="brand-mark"><Cube weight="duotone" size={22} /></div>
         <p className="eyebrow">REVER SkuFlow</p>
-        <h1>{mode === "login" ? "登录工作台" : "创建测试账号"}</h1>
-        <p className="auth-intro">管理产品资料、系列与保质期。数据通过 Supabase 安全同步。</p>
+        <h1>{title}</h1>
+        <p className="auth-intro">{intro}</p>
         <form onSubmit={submit} className="auth-form">
-          <label>邮箱<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@company.com" required /></label>
-          <label>密码<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="至少 6 位" minLength={6} required /></label>
+          {needsEmail && <label>邮箱<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@company.com" required /></label>}
+          {needsPassword && <label>{mode === "updatePassword" ? "新密码" : "密码"}<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="至少 6 位" minLength={6} required /></label>}
+          {mode === "updatePassword" && <label>确认新密码<input type="password" value={passwordConfirm} onChange={(e) => setPasswordConfirm(e.target.value)} placeholder="再次输入新密码" minLength={6} required /></label>}
           {message && <p className="form-message">{message}</p>}
           <button className="button primary full" disabled={busy} type="submit">
-            {busy && <SpinnerGap className="spin" />}{mode === "login" ? "登录" : "注册"}
+            {busy && <SpinnerGap className="spin" />}
+            {mode === "login" && "登录"}
+            {mode === "register" && "注册"}
+            {mode === "forgot" && "发送重置邮件"}
+            {mode === "updatePassword" && "保存新密码"}
           </button>
         </form>
-        <button className="text-button" onClick={() => { setMode(mode === "login" ? "register" : "login"); setMessage(""); }}>
-          {mode === "login" ? "没有账号？注册一个" : "已有账号？返回登录"}
-        </button>
-        <div className="auth-divider"><span>或</span></div>
-        <button className="button secondary full" onClick={onDemo}>进入本地演示</button>
-        <p className="auth-note">演示模式只保存在当前浏览器，不会写入线上数据库。</p>
+        {mode === "login" && (
+          <div className="auth-links">
+            <button className="text-button" onClick={() => switchMode("forgot")}>忘记密码？</button>
+            <button className="text-button" onClick={() => switchMode("register")}>没有账号？注册一个</button>
+          </div>
+        )}
+        {mode === "register" && <button className="text-button" onClick={() => switchMode("login")}>已有账号？返回登录</button>}
+        {mode === "forgot" && <button className="text-button" onClick={() => switchMode("login")}>想起密码？返回登录</button>}
+        {mode !== "updatePassword" && (
+          <>
+            <div className="auth-divider"><span>或</span></div>
+            <button className="button secondary full" onClick={onDemo}>进入本地演示</button>
+            <p className="auth-note">演示模式只保存在当前浏览器，不会写入线上数据库。</p>
+          </>
+        )}
       </section>
     </main>
   );
@@ -621,6 +689,8 @@ function SkuForm({ sku, skus, products, series, nameFields, allowDuplicate, busy
 export function App() {
   const [session, setSession] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
+  const [authNotice, setAuthNotice] = useState("");
   const [demoMode, setDemoMode] = useState(false);
   const [view, setView] = useState("products");
   const [products, setProducts] = useState([]);
@@ -681,7 +751,13 @@ export function App() {
   useEffect(() => {
     if (!supabaseReady) { setAuthChecked(true); return; }
     supabase.auth.getSession().then(({ data }) => { setSession(data.session); setAuthChecked(true); });
-    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => setSession(nextSession));
+    const { data } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      setSession(nextSession);
+      if (event === "PASSWORD_RECOVERY") {
+        setPasswordRecovery(true);
+        setAuthNotice("");
+      }
+    });
     return () => data.subscription.unsubscribe();
   }, []);
 
@@ -1188,7 +1264,19 @@ export function App() {
   }
 
   if (!authChecked) return <main className="loading-page"><SpinnerGap size={26} className="spin" /></main>;
-  if (!session && !demoMode) return <AuthView onDemo={() => setDemoMode(true)} />;
+  if ((passwordRecovery || !session) && !demoMode) {
+    return (
+      <AuthView
+        recoveryMode={passwordRecovery}
+        notice={authNotice}
+        onDemo={() => setDemoMode(true)}
+        onRecoveryComplete={(message) => {
+          setPasswordRecovery(false);
+          setAuthNotice(message);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="app-shell" onClick={() => menuId && setMenuId(null)}>
