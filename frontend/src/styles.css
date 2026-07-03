@@ -225,7 +225,7 @@ td { height: 57px; border-bottom: 1px solid var(--line); padding: 0 8px 0 0; col
 
 .settings-layer { position: fixed; z-index: 70; inset: 0; display: grid; place-items: center; padding: 24px; }
 .settings-backdrop { position: absolute; inset: 0; width: 100%; border: 0; background: rgba(10, 10, 10, 0.36); cursor: default; }
-.settings-dialog { position: relative; width: min(820px, 100%); max-height: min(720px, calc(100vh - 48px)); display: grid; grid-template-rows: auto minmax(0, 1fr); border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow); overflow: hidden; }
+.settings-dialog { position: relative; width: min(820px, 100%); height: min(640px, calc(100vh - 48px)); display: grid; grid-template-rows: auto minmax(0, 1fr); border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow); overflow: hidden; }
 .settings-dialog-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--line); padding: 14px 16px 14px 22px; }
 .settings-dialog-header h2 { margin: 0; color: var(--text-strong); font-size: 18px; letter-spacing: 0; }
 .settings-dialog-body { min-height: 0; display: grid; grid-template-columns: 190px minmax(0, 1fr); }
@@ -331,7 +331,7 @@ td { height: 57px; border-bottom: 1px solid var(--line); padding: 0 8px 0 0; col
   .account .status-dot { width: 8px; height: 8px; }
   .account-menu { top: calc(100% + 9px); right: 0; bottom: auto; }
   .settings-layer { padding: 12px; place-items: stretch; }
-  .settings-dialog { width: 100%; max-height: calc(100vh - 24px); align-self: center; }
+  .settings-dialog { width: 100%; height: calc(100vh - 24px); align-self: center; }
   .settings-dialog-body { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
   .settings-tabs { display: flex; gap: 6px; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--line); padding: 8px 12px; }
   .settings-tabs button { width: auto; flex: none; padding: 8px 10px; white-space: nowrap; }
