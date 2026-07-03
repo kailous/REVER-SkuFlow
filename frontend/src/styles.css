@@ -166,7 +166,7 @@ kbd { margin-left: auto; border: 1px solid var(--line); border-radius: 4px; padd
 .filter-select select { width: auto; height: 38px; border: 0; appearance: none; padding: 0 28px 0 0; background: transparent; box-shadow: none; font-size: 12px; }
 .filter-select > svg { position: absolute; right: 9px; pointer-events: none; }
 
-.table-wrap { max-width: 1180px; min-height: 360px; margin: 0 auto; border-top: 1px solid var(--line-strong); overflow: visible; }
+.table-wrap { max-width: 1180px; min-height: 360px; margin: 0 auto; border-top: 1px solid var(--line-strong); overflow-x: auto; overflow-y: visible; }
 table { width: 100%; border-collapse: collapse; table-layout: fixed; }
 th { height: 46px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 11px; font-weight: 500; text-align: left; }
 .product-table th:nth-child(1) { width: 12%; } .product-table th:nth-child(2) { width: 17%; } .product-table th:nth-child(3) { width: 25%; } .product-table th:nth-child(4) { width: 23%; } .product-table th:nth-child(5) { width: 15%; } .product-table th:nth-child(6) { width: 44px; }
