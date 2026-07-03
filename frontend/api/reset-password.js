@@ -5,6 +5,14 @@ function sendJson(response, status, payload) {
   response.end(JSON.stringify(payload));
 }
 
+function getAuthServiceError(error) {
+  const message = error?.message || String(error || "");
+  if (/failed to fetch|networkerror|load failed|fetch/i.test(message)) {
+    return "无法连接认证服务。请确认 Supabase 项目已恢复为 Active 后再试。";
+  }
+  return message || "重置邮件发送失败，请稍后再试。";
+}
+
 export default async function handler(request, response) {
   if (request.method !== "POST") {
     response.setHeader("Allow", "POST");
@@ -41,11 +49,11 @@ export default async function handler(request, response) {
     });
     const { error } = await supabase.auth.resetPasswordForEmail(email, redirectTo ? { redirectTo } : undefined);
     if (error) {
-      sendJson(response, 400, { error: error.message });
+      sendJson(response, 400, { error: getAuthServiceError(error) });
       return;
     }
     sendJson(response, 200, { ok: true });
-  } catch {
-    sendJson(response, 502, { error: "无法连接认证服务。请稍后再试。" });
+  } catch (error) {
+    sendJson(response, 502, { error: getAuthServiceError(error) });
   }
 }
