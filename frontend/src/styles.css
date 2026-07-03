@@ -397,16 +397,6 @@ table tbody tr:hover { background: var(--surface-hover); }
 .settings-dialog { animation: settings-in 0.2s cubic-bezier(0.22, 1, 0.36, 1); }
 @keyframes settings-in { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
 
-/* Active sidebar button subtle indicator */
-.sidebar-nav button.active::before {
-  content: "";
-  position: absolute;
-  left: 0; top: 6px; bottom: 6px;
-  width: 3px;
-  border-radius: 0 3px 3px 0;
-  background: var(--accent);
-}
-
 /* Name button subtle underline on hover */
 .name-button:hover { text-decoration: underline; text-underline-offset: 2px; }
 
