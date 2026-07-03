@@ -7,6 +7,7 @@ import {
   CaretDown,
   Check,
   Cube,
+  DownloadSimple,
   DotsThree,
   FolderSimple,
   GearSix,
@@ -159,6 +160,15 @@ function getEffectiveProductSellingPoints(product, series) {
 }
 
 function normalizeSellingCopy(value) { return Array.isArray(value) ? value.join("\n") : (value || ""); }
+
+function csvCell(value) {
+  const text = String(value ?? "");
+  return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function safeFilename(value) {
+  return String(value || "表格预览").trim().replace(/[\\/:*?"<>|]/g, "-") || "表格预览";
+}
 
 function getAuthErrorMessage(error) {
   if (!error) return "操作失败，请稍后再试。";
@@ -724,6 +734,7 @@ export function App() {
   const [selectedLibraryId, setSelectedLibraryId] = useState(null);
   const [activities, setActivities] = useState([]);
   const [selectedActivityId, setSelectedActivityId] = useState(null);
+  const [previewActivityId, setPreviewActivityId] = useState("");
   const [series, setSeries] = useState([]);
   const [skus, setSkus] = useState([]);
   const [skuNameFields, setSkuNameFields] = useState(DEFAULT_SKU_NAME_FIELDS);
@@ -797,6 +808,12 @@ export function App() {
   }, []);
 
   useEffect(() => { if (session || demoMode) loadData(); }, [session, demoMode]);
+  useEffect(() => {
+    setPreviewActivityId((current) => {
+      if (!activities.length) return "";
+      return activities.some((activity) => activity.id === current) ? current : activities[0].id;
+    });
+  }, [activities]);
   useEffect(() => {
     if (!toast) return undefined;
     const timer = setTimeout(() => setToast(""), 2800);
@@ -1320,9 +1337,63 @@ export function App() {
       return !normalized || [sku.name, sku.sku_number, binding?.mechanism_copy, mechanism?.mechanism_copy].some((value) => String(value || "").toLowerCase().includes(normalized));
     }).map((sku) => ({ ...sku, activity_binding: bindingMap[sku.id] || null }));
   }, [activityQuery, mechanisms, selectedActivity, skus]);
+  const previewActivity = activities.find((activity) => activity.id === previewActivityId) || null;
+  const previewRows = useMemo(() => {
+    const bindingMap = Object.fromEntries((previewActivity?.activity_skus || []).map((item) => [item.sku_id, item]));
+    const libraryMechanisms = previewActivity ? mechanisms.filter((mechanism) => mechanism.library_id === previewActivity.mechanism_library_id) : [];
+    const fixedMechanisms = libraryMechanisms.filter((mechanism) => mechanism.is_fixed);
+    const mechanismMap = Object.fromEntries(libraryMechanisms.map((mechanism) => [mechanism.id, mechanism]));
+
+    return skus.map((sku) => {
+      const binding = bindingMap[sku.id];
+      const boundMechanism = mechanismMap[binding?.mechanism_id];
+      const appliedMechanisms = [...fixedMechanisms, ...(boundMechanism ? [boundMechanism] : [])];
+      const giftTotals = new Map();
+      appliedMechanisms.forEach((mechanism) => {
+        mechanism.mechanism_gifts?.forEach((item) => {
+          giftTotals.set(item.gift_id, (giftTotals.get(item.gift_id) || 0) + Number(item.quantity || 0));
+        });
+      });
+      const productSummary = (sku.sku_products || []).map((item) => {
+        const product = productMap[item.product_id];
+        const seriesName = seriesMap[product?.series_id]?.name;
+        return `${seriesName ? `${seriesName} / ` : ""}${product?.name || "未知产品"}${product?.specification ? ` ${product.specification}` : ""} × ${item.quantity}`;
+      }).join(" + ");
+      const sourceProduct = productMap[sku.selling_points_source_product_id] || productMap[sku.sku_products?.[0]?.product_id];
+      return {
+        activityName: previewActivity?.name || "",
+        skuNumber: `#${String(sku.sku_number).padStart(4, "0")}`,
+        skuName: sku.name,
+        price: sku.price === null || sku.price === undefined ? "" : Number(sku.price).toFixed(2),
+        products: productSummary,
+        sellingPoints: sku.selling_points !== null && sku.selling_points !== undefined ? normalizeSellingCopy(sku.selling_points) : getEffectiveProductSellingPoints(sourceProduct, series),
+        fixedMechanisms: fixedMechanisms.map((mechanism) => mechanism.mechanism_copy).join("\n"),
+        boundMechanism: boundMechanism?.mechanism_copy || "",
+        gifts: Array.from(giftTotals.entries()).map(([giftId, quantity]) => `${giftMap[giftId]?.name || "未知赠品"} × ${quantity}`).join(" + "),
+        activityCopy: binding?.mechanism_copy || "",
+      };
+    });
+  }, [activities, giftMap, mechanisms, previewActivity, productMap, series, seriesMap, skus]);
 
   function updateSort(key) {
     setSort((current) => ({ key, direction: current.key === key && current.direction === "asc" ? "desc" : "asc" }));
+  }
+
+  function exportPreviewCsv() {
+    if (!previewRows.length) { setToast("没有可导出的预览数据"); return; }
+    const headers = ["活动名称", "SKU 编号", "SKU 名称", "价格", "产品组合", "卖点", "固定机制", "绑定机制", "赠品组合", "活动机制文案"];
+    const lines = [
+      headers.map(csvCell).join(","),
+      ...previewRows.map((row) => [row.activityName, row.skuNumber, row.skuName, row.price, row.products, row.sellingPoints, row.fixedMechanisms, row.boundMechanism, row.gifts, row.activityCopy].map(csvCell).join(",")),
+    ];
+    const blob = new Blob([`\ufeff${lines.join("\n")}`], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${safeFilename(previewActivity?.name || "表格预览")}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    setToast("预览表格已导出");
   }
 
   function renderMechanismTable(items) {
@@ -1354,6 +1425,7 @@ export function App() {
         <nav className="sidebar-nav">
           <button className={view === "skus" ? "active" : ""} onClick={() => setView("skus")}><Package size={19} /><span>SKU 组合</span></button>
           <button className={view === "activities" ? "active" : ""} onClick={() => { setView("activities"); setSelectedActivityId(null); }}><CalendarBlank size={19} /><span>活动管理</span></button>
+          <button className={view === "preview" ? "active" : ""} onClick={() => setView("preview")}><ListBullets size={19} /><span>表格预览</span></button>
           <button className={view === "mechanisms" ? "active" : ""} onClick={() => { setView("mechanisms"); setSelectedLibraryId(null); }}><ArrowsDownUp size={19} /><span>机制管理</span></button>
           <button className={view === "products" ? "active" : ""} onClick={() => setView("products")}><ListBullets size={19} /><span>产品</span></button>
           <button className={view === "gifts" ? "active" : ""} onClick={() => setView("gifts")}><Gift size={19} /><span>赠品管理</span></button>
@@ -1375,7 +1447,26 @@ export function App() {
       </aside>
 
       <main className="workspace">
-        {view === "products" ? (
+        {view === "preview" ? (
+          <>
+            <header className="page-header">
+              <div><p className="breadcrumb">输出</p><h1>表格预览</h1><p className="page-description">生成活动最终预览表，并导出 CSV</p></div>
+              <button className="button primary" disabled={previewRows.length === 0} onClick={exportPreviewCsv}><DownloadSimple size={17} weight="bold" />导出 CSV</button>
+            </header>
+            <div className="toolbar">
+              <label className="filter-select"><span>活动</span><select value={previewActivityId} onChange={(event) => setPreviewActivityId(event.target.value)}><option value="">不选择活动</option>{activities.map((activity) => <option key={activity.id} value={activity.id}>{activity.name}</option>)}</select><CaretDown size={14} /></label>
+              <div className="preview-summary"><span>{previewRows.length} 个 SKU</span><span>{previewActivity ? `活动：${previewActivity.name}` : "未选择活动"}</span></div>
+            </div>
+            <section className="table-wrap preview-table-wrap">
+              {loading ? <div className="table-state"><SpinnerGap size={24} className="spin" />正在加载</div> : previewRows.length === 0 ? <div className="empty-state"><div className="empty-icon"><ListBullets size={22} /></div><h2>还没有可预览的 SKU</h2><p>先创建 SKU，必要时再建立活动和机制。</p></div> : (
+                <table className="preview-table">
+                  <thead><tr><th>活动</th><th>SKU 编号</th><th>SKU 名称</th><th>价格</th><th>产品组合</th><th>卖点</th><th>固定机制</th><th>绑定机制</th><th>赠品组合</th><th>活动文案</th></tr></thead>
+                  <tbody>{previewRows.map((row) => <tr key={row.skuNumber}><td className="muted-cell">{row.activityName || "—"}</td><td className="number-cell">{row.skuNumber}</td><td>{row.skuName}</td><td className="muted-cell">{row.price ? `¥${row.price}` : "—"}</td><td>{row.products || "—"}</td><td>{row.sellingPoints || "—"}</td><td>{row.fixedMechanisms || "—"}</td><td>{row.boundMechanism || "—"}</td><td>{row.gifts || "—"}</td><td>{row.activityCopy || "—"}</td></tr>)}</tbody>
+                </table>
+              )}
+            </section>
+          </>
+        ) : view === "products" ? (
           <>
             <header className="page-header"><div><p className="breadcrumb">商品资料</p><h1>产品</h1><p className="page-description">共 {products.length} 个产品</p></div><button className="button primary" onClick={() => series.length ? setProductEditor({}) : setToast("请先创建一个系列")}><Plus size={17} weight="bold" />新建产品</button></header>
             <div className="toolbar">
