@@ -1309,11 +1309,19 @@ export function App() {
           <button className={view === "products" ? "active" : ""} onClick={() => setView("products")}><ListBullets size={19} /><span>产品</span></button>
           <button className={view === "gifts" ? "active" : ""} onClick={() => setView("gifts")}><Gift size={19} /><span>赠品管理</span></button>
           <button className={view === "series" ? "active" : ""} onClick={() => setView("series")}><FolderSimple size={19} /><span>系列管理</span></button>
-          <button className={view === "settings" ? "active" : ""} onClick={() => setView("settings")}><GearSix size={19} /><span>设置</span></button>
         </nav>
-        <footer className="sidebar-footer">
-          <div className="account"><span className="status-dot" /><div><strong>{demoMode ? "本地演示" : session?.user?.email}</strong><small>{demoMode ? "浏览器数据" : "已连接 Supabase"}</small></div></div>
-          <button className="sidebar-signout" onClick={signOut}><SignOut size={18} />退出</button>
+        <footer className="sidebar-footer" onClick={(event) => event.stopPropagation()}>
+          <button className={view === "settings" ? "account active" : "account"} onClick={() => setMenuId(menuId === "__account" ? null : "__account")} aria-haspopup="menu" aria-expanded={menuId === "__account"}>
+            <span className="status-dot" />
+            <div><strong>{demoMode ? "本地演示" : session?.user?.email}</strong><small>{demoMode ? "浏览器数据" : "已连接 Supabase"}</small></div>
+            <CaretDown size={13} />
+          </button>
+          {menuId === "__account" && (
+            <div className="account-menu" role="menu">
+              <button onClick={() => { setView("settings"); setMenuId(null); }} role="menuitem"><GearSix size={16} />设置</button>
+              <button className="danger-text" onClick={() => { setMenuId(null); signOut(); }} role="menuitem"><SignOut size={16} />退出</button>
+            </div>
+          )}
         </footer>
       </aside>
 

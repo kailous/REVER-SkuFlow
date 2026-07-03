@@ -135,16 +135,21 @@ input::placeholder { color: var(--faint); }
 .sidebar-brand { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 3px 7px; color: var(--text-strong); font-size: 13px; }
 .sidebar-brand strong { white-space: nowrap; }
 .sidebar-nav { display: grid; gap: 2px; margin-top: 24px; }
-.sidebar-nav button, .sidebar-signout { width: 100%; display: flex; align-items: center; gap: 10px; border: 0; border-radius: 6px; padding: 8px 10px; color: var(--muted); background: transparent; font-size: 13px; text-align: left; cursor: pointer; }
-.sidebar-nav button:hover, .sidebar-signout:hover { color: var(--text); background: var(--surface-hover); }
+.sidebar-nav button { width: 100%; display: flex; align-items: center; gap: 10px; border: 0; border-radius: 6px; padding: 8px 10px; color: var(--muted); background: transparent; font-size: 13px; text-align: left; cursor: pointer; }
+.sidebar-nav button:hover { color: var(--text); background: var(--surface-hover); }
 .sidebar-nav button.active { color: var(--text-strong); background: var(--surface-active); font-weight: 600; }
-.sidebar-footer { margin-top: auto; border-top: 1px solid var(--line); padding-top: 12px; }
-.account { display: grid; grid-template-columns: 8px minmax(0, 1fr); align-items: center; gap: 9px; padding: 7px 10px 10px; }
+.sidebar-footer { position: relative; margin-top: auto; border-top: 1px solid var(--line); padding-top: 12px; }
+.account { width: 100%; display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; align-items: center; gap: 9px; border: 0; border-radius: 6px; padding: 7px 10px; background: transparent; text-align: left; cursor: pointer; }
+.account:hover, .account.active { background: var(--surface-hover); }
+.account > svg { color: var(--faint); }
 .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #36a269; box-shadow: 0 0 0 3px color-mix(in srgb, #36a269 15%, transparent); }
 .account div { min-width: 0; }
 .account strong, .account small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .account strong { color: var(--text); font-size: 11px; font-weight: 500; }
 .account small { margin-top: 3px; color: var(--faint); font-size: 10px; }
+.account-menu { position: absolute; z-index: 40; right: 0; bottom: calc(100% + 8px); width: 150px; border: 1px solid var(--line); border-radius: 8px; padding: 5px; background: var(--surface); box-shadow: var(--shadow); }
+.account-menu button { width: 100%; display: flex; align-items: center; gap: 9px; border: 0; border-radius: 5px; padding: 8px 9px; color: var(--text); background: transparent; font-size: 12px; cursor: pointer; }
+.account-menu button:hover { background: var(--surface-hover); }
 
 .workspace { min-width: 0; padding: 52px clamp(28px, 5vw, 76px) 80px; }
 .page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; max-width: 1180px; margin: 0 auto; }
@@ -296,9 +301,13 @@ td { height: 57px; border-bottom: 1px solid var(--line); padding: 0 8px 0 0; col
 @media (max-width: 780px) {
   .app-shell { grid-template-columns: 1fr; }
   .sidebar { position: sticky; z-index: 30; width: 100%; height: auto; flex-direction: row; align-items: center; border-right: 0; border-bottom: 1px solid var(--line); padding: 8px 12px; }
-  .sidebar-brand strong, .sidebar-footer, .sidebar-nav button span { display: none; }
+  .sidebar-brand strong, .sidebar-nav button span, .account div, .account > svg { display: none; }
   .sidebar-nav { display: flex; margin: 0 0 0 auto; }
   .sidebar-nav button { width: auto; padding: 8px 10px; }
+  .sidebar-footer { flex: none; margin: 0 0 0 4px; border-top: 0; padding-top: 0; }
+  .account { width: 34px; height: 34px; display: grid; grid-template-columns: 1fr; place-items: center; padding: 0; }
+  .account .status-dot { width: 8px; height: 8px; }
+  .account-menu { top: calc(100% + 9px); right: 0; bottom: auto; }
   .workspace { padding: 30px 18px 60px; }
   .page-header { align-items: flex-start; }
   .page-header h1 { font-size: 25px; }
