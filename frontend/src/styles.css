@@ -130,8 +130,8 @@ input::placeholder { color: var(--faint); }
 .auth-divider::before, .auth-divider::after { content: ""; height: 1px; flex: 1; background: var(--line); }
 .auth-note { margin: 13px 0 0; color: var(--faint); text-align: center; font-size: 11px; line-height: 1.5; }
 
-.app-shell { min-height: 100vh; display: grid; grid-template-columns: 236px minmax(0, 1fr); background: var(--bg); }
-.sidebar { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; border-right: 1px solid var(--line); background: var(--sidebar); padding: 15px 11px 12px; }
+.app-shell { height: 100vh; display: grid; grid-template-columns: 236px minmax(0, 1fr); overflow: hidden; background: var(--bg); }
+.sidebar { height: 100vh; display: flex; flex-direction: column; border-right: 1px solid var(--line); background: var(--sidebar); padding: 15px 11px 12px; }
 .sidebar-brand { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 3px 7px; color: var(--text-strong); font-size: 13px; }
 .sidebar-brand strong { white-space: nowrap; }
 .sidebar-nav { display: grid; gap: 2px; margin-top: 24px; }
@@ -151,7 +151,7 @@ input::placeholder { color: var(--faint); }
 .account-menu button { width: 100%; display: flex; align-items: center; gap: 9px; border: 0; border-radius: 5px; padding: 8px 9px; color: var(--text); background: transparent; font-size: 12px; cursor: pointer; }
 .account-menu button:hover { background: var(--surface-hover); }
 
-.workspace { min-width: 0; padding: 52px clamp(28px, 5vw, 76px) 80px; }
+.workspace { min-width: 0; height: 100vh; overflow-y: auto; padding: 52px clamp(28px, 5vw, 76px) 80px; }
 .page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; max-width: 1180px; margin: 0 auto; }
 .breadcrumb { margin: 0 0 15px; color: var(--muted); font-size: 12px; }
 .page-header h1 { margin: 0; color: var(--text-strong); font-size: 30px; line-height: 1.2; letter-spacing: -0.035em; }
@@ -330,7 +330,7 @@ td { height: 57px; border-bottom: 1px solid var(--line); padding: 0 8px 0 0; col
 .toast svg { color: #36a269; }
 
 @media (max-width: 780px) {
-  .app-shell { grid-template-columns: 1fr; }
+  .app-shell { min-height: 100vh; height: auto; grid-template-columns: 1fr; overflow: visible; }
   .sidebar { position: sticky; z-index: 30; width: 100%; height: auto; flex-direction: row; align-items: center; border-right: 0; border-bottom: 1px solid var(--line); padding: 8px 12px; }
   .sidebar-brand strong, .sidebar-nav button span, .account div, .account > svg { display: none; }
   .sidebar-nav { display: flex; margin: 0 0 0 auto; }
@@ -348,7 +348,7 @@ td { height: 57px; border-bottom: 1px solid var(--line); padding: 0 8px 0 0; col
   .settings-input-row, .settings-select-row, .settings-danger-row { align-items: flex-start; flex-direction: column; }
   .settings-input-row input, .settings-select-row select { width: 100%; }
   .settings-save-row { bottom: -22px; margin: 22px -18px -22px; padding: 12px 18px; }
-  .workspace { padding: 30px 18px 60px; }
+  .workspace { height: auto; overflow-y: visible; padding: 30px 18px 60px; }
   .page-header { align-items: flex-start; }
   .page-header h1 { font-size: 25px; }
   .toolbar { align-items: stretch; flex-direction: column; }
